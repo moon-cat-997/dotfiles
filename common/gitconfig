@@ -3,6 +3,10 @@
 
 [includeIf "gitdir:/home/dmitriy/Projects/JuliusAgency/"]
     path = /home/dmitriy/.gitconfig-work
+    
+[includeIf "gitdir:/home"]
+    path = /home/dmitriy/.gitconfig-personal
+
 
 [alias]
     ch = checkout
