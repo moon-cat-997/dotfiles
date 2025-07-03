@@ -1,0 +1,26 @@
+# Backup and temporary files
+*~
+*.swp
+*.swo
+*.bak
+.DS_Store
+Thumbs.db
+
+# SSH private keys (на всякий случай, если кто-то положит)
+*.pem
+*.key
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+*.pub
+
+# VSCode config
+.vscode/
+
+# Local personal settings (если захочешь использовать .local)
+*.local
+
+# System-specific
+.trash/
+.cache/

@@ -1,0 +1,13 @@
+[includeIf "gitdir:/home/dmitriy/Projects/Own/"]
+    path = /home/dmitriy/.gitconfig-personal
+
+[includeIf "gitdir:/home/dmitriy/Projects/JuliusAgency/"]
+    path = /home/dmitriy/.gitconfig-work
+
+[alias]
+    ch = checkout
+    galog = log --graph --all
+    glog = log --graph --all --oneline
+
+[init]
+	defaultBranch = main
