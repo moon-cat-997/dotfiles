@@ -8,4 +8,4 @@ fi
 TARGET_DIR=~/Projects/JuliusAgency/$(basename "$1" .git)
 
 echo "Cloning with work identity (ivanovdm812@gmail.com)"
-git clone git@github.com:$1 "$TARGET_DIR"
+git clone git@github-work:$1 "$TARGET_DIR"
