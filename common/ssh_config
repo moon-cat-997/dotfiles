@@ -1,5 +1,12 @@
-Host github-kotik
+Host github-personal
   HostName github.com
   User git
   IdentityFile ~/.ssh/id_kotikobormotik
   IdentitiesOnly yes
+
+Host github-work
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_wandel812
+  IdentitiesOnly yes
+
