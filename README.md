@@ -30,6 +30,12 @@ This will:
 - Make all scripts executable and link them into `~/bin`
 - Run platform-specific setup depending on your OS
 
+ !TODO add this to the script 
+Additionaly two ssh-keys are necessary to create. Their names are: id_kotikobormotik and id_wandel812 with the emails correspondenly
+```bash
+ssh-keygen -t ed25519 -C "ivanovdm812@gmail.com"
+```
+
 ---
 
 ## 🗂 Structure
