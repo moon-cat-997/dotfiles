@@ -18,6 +18,9 @@ ln -sf ~/dotfiles/common/gitconfig-work ~/.gitconfig-work
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
 ln -sf ~/dotfiles/common/ssh_config ~/.ssh/config
 
+# !TODO Create directories Projects/Own; Projects/JuliusAgency;
+# !TODO Create .ssh-keys if needed
+
 # Make git-scripts executable and link them
 echo "- Linking git scripts..."
 for script in ~/dotfiles/git-scripts/*.sh; do
