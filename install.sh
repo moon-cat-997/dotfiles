@@ -4,6 +4,8 @@ set -e
 
 echo "- Installing dotfiles..."
 
+!TODO ask about username
+
 # Detect OS
 OS="$(uname -s)"
 echo "- Detected OS: $OS"
