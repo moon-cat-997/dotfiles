@@ -45,12 +45,14 @@ dotfiles/
 ├── common/             # Shared configuration files
 │   ├── gitconfig
 │   ├── gitconfig-personal
+|   ├── gitconfig-office    
 │   ├── gitconfig-work
 │   ├── ssh_config
 │   └── zshrc
 ├── git-scripts/        # Git-related utility scripts
 │   ├── clone-personal.sh
 │   ├── clone-work.sh
+|   ├── clone-office.sh
 │   └── git-whoami.sh
 ├── linux/              # Linux-specific setup and tools
 │   ├── linux-setup.sh
@@ -61,7 +63,8 @@ dotfiles/
 └── README.md
 ```
 
----
+
+
 
 ## ⚙️ Usage
 
@@ -94,14 +97,15 @@ clone-work
 
 This setup uses conditional includes in `.gitconfig` to switch Git identity based on directory:
 
-- Projects under `~/Projects/JuliusAgency` → use `gitconfig-work`
+- Projects under `~/Projects/JuliusAgency` → use `gitconfig-office`
+- Project under '~/Projects/JuliusAgency' → use `gitconfig-work` -- this is deprecated 
 - Projects under `~/Projects/Own` → use `gitconfig-personal`
 
 This is achieved via:
 
 ```gitconfig
 [includeIf "gitdir:~/Projects/JuliusAgency/"]
-    path = ~/.gitconfig-work
+    path = ~/.gitconfig-office
 [includeIf "gitdir:~/Projects/Own/"]
     path = ~/.gitconfig-personal
 ```

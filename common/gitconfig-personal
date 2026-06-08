@@ -1,7 +1,0 @@
-[alias]
-	ch = checkout
-	galog = log --graph --all
-	glog = log --graph --all --oneline
-[user]
-	email = ivanovdmit812@gmail.com
-	name = Dmitriy Ivanov

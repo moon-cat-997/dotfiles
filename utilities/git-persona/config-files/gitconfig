@@ -2,7 +2,7 @@
     path = /home/dmitriy/.gitconfig-personal
 
 [includeIf "gitdir:/home/dmitriy/Projects/JuliusAgency/"]
-    path = /home/dmitriy/.gitconfig-work
+    path = /home/dmitriy/.gitconfig-office
     
 [includeIf "gitdir:/home"]
     path = /home/dmitriy/.gitconfig-personal
@@ -15,3 +15,9 @@
 
 [init]
 	defaultBranch = main
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
