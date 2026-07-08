@@ -9,17 +9,18 @@ A personal repository of configuration files and helper scripts for automaticall
 ## 📦 Features
 
 - One-command environment setup via `install.sh`
-- Separate Git configurations for personal and work contexts
+- Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
 - Zsh and SSH client configuration
-- Git helper scripts (`git-whoami`, `clone-*`)
-- System update script for Linux
-- Platform-specific setup (Linux and macOS)
+- Helper scripts (`hat`, `git-whoami`, `update-system`, `copyclip`)
+- Platform-specific setup (Linux; macOS is a stub)
 
 ---
 
 ## 🚀 Installation
 
 ```bash
+# First clone on a fresh machine must be HTTPS — no SSH keys exist yet
+git clone https://github.com/kotikobormotik812/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
@@ -28,13 +29,18 @@ This will:
 
 - Create symbolic links for configuration files in your home directory
 - Make all scripts executable and link them into `~/bin`
-- Run platform-specific setup depending on your OS
+- Run `hat sync` to generate per-persona git/ssh configs (and create the persona directories)
+- Run platform-specific setup depending on your OS (installs `gh` on Linux)
 
- !TODO add this to the script 
-Additionaly two ssh-keys are necessary to create. Their names are: id_kotikobormotik and id_wandel812 with the emails correspondenly
+On a **new machine**, finish the bootstrap with:
+
 ```bash
-ssh-keygen -t ed25519 -C "ivanovdm812@gmail.com"
+gh auth login    # HTTPS credentials are delegated to gh
+hat keygen       # generate missing per-persona SSH keys, upload pubkeys via gh
+hat doctor       # verify: gh, keys, dirs, live ssh auth per persona
 ```
+
+See [utilities/git-hat/README.md](utilities/git-hat/README.md) for the full bootstrap details.
 
 ---
 
@@ -42,29 +48,25 @@ ssh-keygen -t ed25519 -C "ivanovdm812@gmail.com"
 
 ```
 dotfiles/
-├── common/             # Shared configuration files
-│   ├── gitconfig
-│   ├── gitconfig-personal
-|   ├── gitconfig-office    
-│   ├── gitconfig-work
-│   ├── ssh_config
+├── common/                 # Shared configuration files
 │   └── zshrc
-├── git-scripts/        # Git-related utility scripts
-│   ├── clone-personal.sh
-│   ├── clone-work.sh
-|   ├── clone-office.sh
+├── git-scripts/            # Git-related utility scripts
 │   └── git-whoami.sh
-├── linux/              # Linux-specific setup and tools
+├── linux/                  # Linux-specific setup and tools
+│   ├── copyclip.sh
 │   ├── linux-setup.sh
 │   └── update-system.sh
-├── macos/              # macOS-specific setup (optional)
+├── macos/                  # macOS-specific setup (stub)
 │   └── macos-setup.sh
-├── install.sh          # Main installation script
+├── utilities/
+│   └── git-hat/            # directory-based git identity manager (see its README)
+│       ├── git-hat         # dispatcher (whoami / clone / sync / keygen / doctor)
+│       ├── personas/       # source of truth — one *.conf per identity
+│       ├── config-files/   # static bases symlinked into ~ (gitconfig, ssh_config)
+│       └── generated/      # derived by `hat sync` (git-ignored)
+├── install.sh              # Main installation script
 └── README.md
 ```
-
-
-
 
 ## ⚙️ Usage
 
@@ -80,35 +82,32 @@ update-system
 
 ### Check which Git identity is in use:
 ```bash
-git-whoami
+git-whoami      # actual name/email git resolves in the current repo
+hat whoami      # persona assigned to the current directory
 ```
 
-### Clone repositories:
+### Clone repositories with the right identity:
 ```bash
-clone-personal
-clone-work
+cd ~/Projects/Own
+hat clone git@github.com:org/repo.git   # clones via the persona's SSH alias
 ```
 
-> All helper scripts from `git-scripts/` are symlinked into `~/bin` and available globally.
+> All helper scripts are symlinked into `~/bin` and available globally.
 
 ---
 
 ## 🔧 Git Identity Management
 
-This setup uses conditional includes in `.gitconfig` to switch Git identity based on directory:
+Identity is selected **by directory**: each persona in
+`utilities/git-hat/personas/<name>.conf` declares a `DIR`, and `hat sync`
+generates the `includeIf "gitdir:..."` blocks and `github-<name>` SSH aliases
+from it. Everything outside a persona directory defaults to personal.
 
-- Projects under `~/Projects/JuliusAgency` → use `gitconfig-office`
-- Project under '~/Projects/JuliusAgency' → use `gitconfig-work` -- this is deprecated 
-- Projects under `~/Projects/Own` → use `gitconfig-personal`
+- `~/Projects/Own/**` → personal
+- `~/Projects/JuliusAgency/**` → office
+- `~/Projects/Own-old/**` → work (deprecated account)
 
-This is achieved via:
-
-```gitconfig
-[includeIf "gitdir:~/Projects/JuliusAgency/"]
-    path = ~/.gitconfig-office
-[includeIf "gitdir:~/Projects/Own/"]
-    path = ~/.gitconfig-personal
-```
+Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 
 ---
 
@@ -122,13 +121,15 @@ This is achieved via:
 ## 📌 Notes
 
 - Make sure `~/bin` is in your `$PATH`
-- All `.sh` files in `git-scripts/` are made executable during installation
+- All `.sh` files in `git-scripts/` and `linux/` are made executable during installation
 - Aliases and environment variables are set in `zshrc` under `common/`
+- Private SSH keys are never committed; regenerate them with `hat keygen`
 
 ---
 
 ## 🧩 Planned Improvements
 
+- Ask about username instead of hardcoding `/home/dmitriy`
 - Auto-install of Zsh plugins and fonts
 - Homebrew integration on macOS
 - Automatic backup of existing config files before linking

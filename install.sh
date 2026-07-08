@@ -4,7 +4,7 @@ set -e
 
 echo "- Installing dotfiles..."
 
-!TODO ask about username
+# TODO: paths hardcode /home/dmitriy (see CLAUDE.md) — ask about username one day
 
 # Detect OS
 OS="$(uname -s)"
@@ -27,9 +27,6 @@ GP_CONFIG=~/dotfiles/utilities/git-hat/config-files
 ln -sf "$GP_CONFIG/gitconfig"  ~/.gitconfig
 ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
-
-# !TODO Create directories Projects/Own; Projects/JuliusAgency;
-# !TODO Create .ssh-keys if needed
 
 # Make git-scripts executable and link them
 echo "- Linking git scripts..."
