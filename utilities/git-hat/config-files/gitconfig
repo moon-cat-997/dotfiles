@@ -1,0 +1,27 @@
+# Static git settings only.
+# Persona identities are GENERATED from utilities/git-hat/personas/*.conf
+# via `hat sync` into ../generated/. Edit identities in personas/, NOT here.
+
+# Default identity (personal); persona directories override it below.
+[include]
+	path = /home/dmitriy/dotfiles/utilities/git-hat/generated/gitconfig-personal
+
+# Per-persona identity by directory (Own→personal, JuliusAgency→office, Own-old→work)
+[include]
+	path = /home/dmitriy/dotfiles/utilities/git-hat/generated/gitconfig-includes
+
+[alias]
+	ch = checkout
+	galog = log --graph --all
+	glog = log --graph --all --oneline
+
+[init]
+	defaultBranch = main
+
+[credential "https://github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential

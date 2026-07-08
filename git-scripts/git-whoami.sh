@@ -8,8 +8,8 @@ OWN_DIR="$HOME/Projects/Own"
 echo "Current directory: $CURRENT_DIR"
 
 if [[ "$CURRENT_DIR" == "$JULIUS_DIR"* ]]; then
-  echo "Detected work project (JuliusAgency)"
-  config_used="$HOME/.gitconfig-work"
+  echo "Detected office project (JuliusAgency)"
+  config_used="$HOME/.gitconfig-office"
 elif [[ "$CURRENT_DIR" == "$OWN_DIR"* ]]; then
   echo "Detected personal project (Own)"
   config_used="$HOME/.gitconfig-personal"

@@ -24,3 +24,6 @@ id_dsa
 # System-specific
 .trash/
 .cache/
+
+# git-hat generated output (derived from personas/*.conf via `hat sync`)
+utilities/git-hat/generated/

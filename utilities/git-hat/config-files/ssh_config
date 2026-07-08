@@ -1,0 +1,3 @@
+# SSH host aliases (github-<persona>) are GENERATED from
+# utilities/git-hat/personas/*.conf via `hat sync`. Edit personas/, then run `hat sync`.
+Include /home/dmitriy/dotfiles/utilities/git-hat/generated/ssh_config

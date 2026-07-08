@@ -1,0 +1,312 @@
+#!/bin/bash
+set -euo pipefail
+shopt -s nullglob   # незамэтченный glob раскрывается в пустоту, а не в литерал '*'
+
+# readlink -f разыменовывает симлинк (~/bin/git-hat, ~/bin/hat → реальный файл в репо),
+# иначе SCRIPT_DIR указал бы на ~/bin, где нет personas/.
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PERSONAS_DIR="$SCRIPT_DIR/personas"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: git-hat <command> [args]
+
+Commands:
+  clone <url>   clone repo using persona for current dir
+  whoami        show persona for current dir
+  sync          regenerate ssh/git config from personas/ (creates persona dirs)
+  keygen        generate missing persona ssh keys, offer upload via gh
+  doctor        check machine readiness: gh, keys, dirs, ssh auth per persona
+EOF
+}
+
+list_personas() {
+  local f
+  for f in "$PERSONAS_DIR"/*.conf; do
+    basename "$f" .conf
+  done
+}
+
+load_persona() {
+  local name="$1"
+  local file="$PERSONAS_DIR/$name.conf"
+
+  if [ ! -f "$file" ]; then 
+    echo "Unknown persona: $name" >&2
+    return 1
+  fi
+
+  source "$file"
+}
+
+# persona_for_path <path> — печатает имя персоны, в чьей DIR лежит путь.
+# Совпадение по границе '/', при нескольких — выигрывает самое длинное DIR.
+persona_for_path() {
+  local path
+  path=$(realpath -m "$1")            # нормализуем входной путь
+
+  local best_name="" best_len=0       # лучшее совпадение пока пустое
+
+  local name dir
+  for name in $(list_personas); do
+    load_persona "$name"              # подгрузит DIR этой персоны из .conf
+    dir=$(realpath -m "$DIR")         # нормализуем её каталог
+
+    # path внутри dir (или равен) — по границе '/'
+    if [ "$path" = "$dir" ] || [ "${path#"$dir"/}" != "$path" ]; then
+      # оставить, только если этот dir длиннее прежнего лучшего
+      if [ "${#dir}" -gt "$best_len" ]; then
+        best_name="$name"
+        best_len="${#dir}"
+      fi
+    fi
+  done
+
+  # Явный возврат: нашли → печать + успех; не нашли → код 1 (сигнал "нет персоны")
+  if [ -n "$best_name" ]; then
+    echo "$best_name"
+  else
+    return 1
+  fi
+}
+
+# cmd_whoami [path] — печатает персону для пути (по умолчанию — текущая папка)
+cmd_whoami() {
+  local path="${1:-$PWD}"          # аргумент, а если нет — $PWD
+  local persona
+  if persona=$(persona_for_path "$path"); then
+    echo "$persona"
+  else
+    echo "No persona for: $path" >&2
+    return 1
+  fi
+}
+
+# cmd_clone <git-url> — клонирует репозиторий в $PWD под персоной текущей папки.
+# Принимает и scp-форму (git@github.com:org/repo.git), и https-форму.
+cmd_clone() {
+  local url="${1:-}"
+  if [ -z "$url" ]; then
+    echo "Usage: git-hat clone <git-url>" >&2
+    return 1
+  fi
+
+  # 1. персона по текущей директории
+  local persona
+  if ! persona=$(persona_for_path "$PWD"); then
+    echo "No persona for current directory: $PWD" >&2
+    echo "cd into a persona directory first (see 'git-hat whoami')." >&2
+    return 1
+  fi
+
+  # 2. вытащить org/repo из любого формата URL
+  local path="${url%.git}"     # убрать хвостовой .git
+  path="${path#*://}"          # убрать схему https:// / ssh:// если есть
+  path="${path#*@}"            # убрать user@ если есть
+  path="${path#*[:/]}"         # убрать host + первый ':' или '/'
+
+  if [[ ! "$path" =~ ^[^/]+/[^/]+$ ]]; then
+    echo "Cannot parse 'org/repo' from URL: $url" >&2
+    return 1
+  fi
+
+  # 3. проверить, что папка назначения свободна
+  local repo="${path##*/}"
+  if [ -e "$PWD/$repo" ]; then
+    echo "Target already exists: $PWD/$repo" >&2
+    return 1
+  fi
+
+  # 4. переписать хост на алиас персоны и клонировать
+  local new_url="git@github-${persona}:${path}.git"
+  echo "Cloning as '$persona': $new_url"
+  git clone "$new_url"
+}
+
+# cmd_sync — генерирует ssh_config, gitconfig-<persona> и includeIf-блоки
+# из personas/*.conf в подпапку generated/.
+cmd_sync() {
+  local out="$SCRIPT_DIR/generated"
+  mkdir -p "$out"
+
+  local ssh_out="$out/ssh_config"
+  local inc_out="$out/gitconfig-includes"
+  rm -f "$out"/gitconfig-*   # убрать конфиги удалённых персон (всё derived)
+  : > "$ssh_out"      # обнулить файлы перед записью
+  : > "$inc_out"
+
+  local name
+  for name in $(list_personas); do
+    load_persona "$name"
+
+    # создать каталог персоны — includeIf и `hat clone` ожидают его наличие
+    mkdir -p "$DIR"
+
+    # предупредить, если приватного ключа ещё нет (sync не блокируем)
+    if [ ! -f "$KEY" ]; then
+      echo "⚠ $name: key not found: $KEY — run 'hat keygen'" >&2
+    fi
+
+    # SSH host-блок: github-<name> → ключ персоны
+    cat >> "$ssh_out" <<EOF
+Host github-$name
+  HostName github.com
+  User git
+  IdentityFile $KEY
+  IdentitiesOnly yes
+
+EOF
+
+    # Персональный gitconfig с identity
+    cat > "$out/gitconfig-$name" <<EOF
+[user]
+	name = $NAME
+	email = $EMAIL
+EOF
+
+    # includeIf: в каталоге персоны применять её gitconfig
+    cat >> "$inc_out" <<EOF
+[includeIf "gitdir:$DIR/"]
+	path = $out/gitconfig-$name
+EOF
+  done
+
+  echo "Generated in $out:"
+  ls -1 "$out"
+}
+
+# cmd_keygen — генерирует отсутствующие ключи персон (ed25519).
+# Скачать приватный ключ с GitHub нельзя — там хранятся только публичные;
+# поэтому генерируем локально и предлагаем загрузить .pub через gh.
+cmd_keygen() {
+  local name
+  for name in $(list_personas); do
+    load_persona "$name"
+
+    if [ -f "$KEY" ]; then
+      echo "✔ $name: key exists: $KEY"
+      continue
+    fi
+
+    echo "── $name: generating $KEY"
+    ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY"
+
+    # Загрузка pubkey — только с явного согласия: gh залогинен в ОДИН аккаунт,
+    # а персоны маппятся на разные. Показываем, какой аккаунт активен.
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      local active ans
+      active=$(gh api user --jq .login 2>/dev/null || echo "unknown")
+      read -rp "Upload $KEY.pub to GitHub account '$active'? [y/N] " ans || ans=""
+      if [[ "$ans" =~ ^[Yy]$ ]]; then
+        if ! gh ssh-key add "$KEY.pub" --title "hat-$name-$(hostname)"; then
+          echo "  upload failed — likely missing scope; fix with:" >&2
+          echo "  gh auth refresh -h github.com -s admin:public_key" >&2
+        fi
+      else
+        echo "  skipped — upload later (to the RIGHT account, see 'gh auth switch'):"
+        echo "  gh ssh-key add $KEY.pub --title hat-$name-$(hostname)"
+      fi
+    else
+      echo "  gh not available/authenticated — add the key manually:"
+      echo "  gh ssh-key add $KEY.pub --title hat-$name-$(hostname)"
+      echo "  (or paste $KEY.pub at https://github.com/settings/keys)"
+    fi
+  done
+}
+
+# cmd_doctor — проверка готовности машины: gh, generated-конфиги,
+# и per persona: каталог, ключ, реальная ssh-аутентификация на GitHub.
+cmd_doctor() {
+  local fail=0
+
+  # gh нужен для https credential helper из config-files/gitconfig
+  if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+      echo "✔ gh: installed & authenticated"
+    else
+      echo "✘ gh: installed, but not authenticated — run 'gh auth login'"
+      fail=1
+    fi
+  else
+    echo "✘ gh: not installed — sudo pacman -S github-cli"
+    fail=1
+  fi
+
+  if [ -f "$SCRIPT_DIR/generated/ssh_config" ]; then
+    echo "✔ generated configs present"
+  else
+    echo "✘ generated configs missing — run 'hat sync'"
+    fail=1
+  fi
+
+  local name
+  for name in $(list_personas); do
+    load_persona "$name"
+    echo "── $name"
+
+    if [ -d "$DIR" ]; then
+      echo "  ✔ dir: $DIR"
+    else
+      echo "  ✘ dir missing: $DIR — run 'hat sync'"
+      fail=1
+    fi
+
+    if [ -f "$KEY" ]; then
+      echo "  ✔ key: $KEY"
+    else
+      echo "  ✘ key missing: $KEY — run 'hat keygen'"
+      fail=1
+      continue   # без ключа ssh-тест бессмыслен
+    fi
+
+    # GitHub на `ssh -T` всегда возвращает 1 — успех определяем по тексту ответа
+    local out login
+    out=$(ssh -T -o BatchMode=yes -o ConnectTimeout=5 \
+              -o StrictHostKeyChecking=accept-new "git@github-$name" 2>&1 || true)
+    if [[ "$out" == *"successfully authenticated"* ]]; then
+      login="${out#Hi }"; login="${login%%!*}"
+      echo "  ✔ ssh: authenticated as '$login'"
+    else
+      echo "  ✘ ssh: auth failed — ${out:-no output}"
+      fail=1
+    fi
+  done
+
+  [ "$fail" -eq 0 ] && echo "All checks passed."
+  return "$fail"
+}
+
+main() {
+  if [ $# -eq 0 ]; then
+    usage
+    exit 1
+  fi
+
+  local cmd="$1"
+  shift
+
+  case "$cmd" in
+    clone)
+      cmd_clone "$@"
+      ;;
+    whoami)
+      cmd_whoami "$@"
+      ;;
+    sync)
+      cmd_sync "$@"
+      ;;
+    keygen)
+      cmd_keygen "$@"
+      ;;
+    doctor)
+      cmd_doctor "$@"
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+  
+}
+
+main "$@"

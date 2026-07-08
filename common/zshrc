@@ -15,12 +15,19 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="/home/dmitriy/.flutter_install/flutter/bin:$PATH"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk
 
 # Aliases
 alias pacup="sudo pacman -Syu"
 alias aup="pamac upgrade --aur"
 alias toju="cd ~/Projects/JuliusAgency"
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+alias toown="cd ~/Projects/Own"
 
+# ??? 
 [[ ":$PATH:" != *":$HOME/bin:"* ]] && export PATH="$HOME/bin:$PATH"
+
+# Extra keys
+#
+# Ctrl+Backspace removes a whole word  
+bindkey '^H' backward-kill-word

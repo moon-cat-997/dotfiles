@@ -13,12 +13,20 @@ echo "- Detected OS: $OS"
 # Ensure ~/bin exists
 mkdir -p ~/bin
 
-# Link common config files
-ln -sf ~/dotfiles/common/gitconfig ~/.gitconfig
-ln -sf ~/dotfiles/common/gitconfig-personal ~/.gitconfig-personal
-ln -sf ~/dotfiles/common/gitconfig-work ~/.gitconfig-work
+# ~/.ssh may not exist on a fresh machine — create it before linking ssh_config,
+# otherwise `ln -sf ... ~/.ssh/config` fails and set -e aborts the install.
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Link config files
+#   git/ssh configs live under utilities/git-hat/config-files/
+#   zshrc lives under common/
+#   gitconfig/ssh_config are static bases that `include` the generated files;
+#   per-persona identities are produced by `git-hat sync` (see below).
+GP_CONFIG=~/dotfiles/utilities/git-hat/config-files
+ln -sf "$GP_CONFIG/gitconfig"  ~/.gitconfig
+ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
-ln -sf ~/dotfiles/common/ssh_config ~/.ssh/config
 
 # !TODO Create directories Projects/Own; Projects/JuliusAgency;
 # !TODO Create .ssh-keys if needed
@@ -50,6 +58,17 @@ for script in ~/dotfiles/macos/*.sh; do
   echo "  ✔ Linked $name"
 done 
 
+
+# Link git-hat utility (usable as `git-hat`, `git hat`, or `hat`)
+echo "- Linking git-hat..."
+chmod +x ~/dotfiles/utilities/git-hat/git-hat
+ln -sf ~/dotfiles/utilities/git-hat/git-hat "$HOME/bin/git-hat"
+ln -sf ~/dotfiles/utilities/git-hat/git-hat "$HOME/bin/hat"
+echo "  ✔ Linked git-hat, hat"
+
+# Generate ssh/git identity configs from personas/ (source of truth) into generated/
+echo "- Generating git-hat configs..."
+~/dotfiles/utilities/git-hat/git-hat sync
 
 # Run OS-specific setup
 case "$OS" in
