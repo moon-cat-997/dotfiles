@@ -29,8 +29,10 @@ ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
 
 # Make git-scripts executable and link them
+# (the dir may be absent — git doesn't track empty directories)
 echo "- Linking git scripts..."
 for script in ~/dotfiles/git-scripts/*.sh; do
+  [ -e "$script" ] || continue
   chmod +x "$script"
   name=$(basename "$script" .sh)
   ln -sf "$script" "$HOME/bin/$name"
@@ -38,8 +40,10 @@ for script in ~/dotfiles/git-scripts/*.sh; do
 done
 
 # Make linux-scripts executable and link them
-echo "- Linking git scripts..."
-for script in ~/dotfiles/linux/*.sh; do
+# (top-level and one-level subdirectories, e.g. linux/update-system/)
+echo "- Linking linux scripts..."
+for script in ~/dotfiles/linux/*.sh ~/dotfiles/linux/*/*.sh; do
+  [ -e "$script" ] || continue
   chmod +x "$script"
   name=$(basename "$script" .sh)
   ln -sf "$script" "$HOME/bin/$name"

@@ -39,9 +39,6 @@ works as a Git subcommand: `git hat whoami`.
 | `hat keygen` | Generate an ed25519 key for every persona whose `KEY` file is missing, then offer to upload the public key to GitHub via `gh ssh-key add`. |
 | `hat doctor` | Health check: `gh` installed & authenticated, generated configs present, and per persona — `DIR` exists, `KEY` exists, and a live `ssh -T` auth test showing which GitHub account the key actually maps to. |
 
-Also available: `git-whoami` — prints the actual name/email Git resolves in the
-current repo (useful to confirm what a commit will be attributed to).
-
 ## New machine bootstrap
 
 The repo carries all the *logic*, but not the *secrets* — private SSH keys are
