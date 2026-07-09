@@ -95,6 +95,12 @@ cd ~/Projects/Own
 hat clone git@github.com:org/repo.git   # clones via the persona's SSH alias
 ```
 
+### Fix a repo cloned without `hat clone`:
+```bash
+cd ~/Projects/Own/some-repo
+hat adopt   # rewrites its GitHub remotes to the dir's persona alias
+```
+
 > All helper scripts are symlinked into `~/bin` and available globally.
 
 ---

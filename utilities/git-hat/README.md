@@ -35,6 +35,7 @@ works as a Git subcommand: `git hat whoami`.
 |---|---|
 | `hat whoami [path]` | Print the persona for the current dir (or `path`). |
 | `hat clone <git-url>` | Clone into `$PWD` using the persona of `$PWD`, rewriting the URL host to `github-<persona>`. Accepts `git@github.com:org/repo.git` and `https://github.com/org/repo.git`. |
+| `hat adopt` | Fix a repo acquired *without* `hat clone`: rewrite **all** GitHub remotes (`github.com`, https, or a wrong `github-<persona>` alias) to the persona of the repo's directory. Non-GitHub remotes are left alone. Idempotent. |
 | `hat sync` | Regenerate `generated/` (ssh aliases + git identities) from `personas/*.conf`. Also creates each persona's `DIR` and warns about missing SSH keys. |
 | `hat keygen` | Generate an ed25519 key for every persona whose `KEY` file is missing, then offer to upload the public key to GitHub via `gh ssh-key add`. |
 | `hat doctor` | Health check: `gh` installed & authenticated, generated configs present, and per persona — `DIR` exists, `KEY` exists, and a live `ssh -T` auth test showing which GitHub account the key actually maps to. |
@@ -124,7 +125,7 @@ identities back into `config-files/`; edit `personas/` and re-sync.
 
 ```
 utilities/git-hat/
-├── git-hat            # dispatcher (whoami / clone / sync / keygen / doctor)
+├── git-hat            # dispatcher (whoami / clone / adopt / sync / keygen / doctor)
 ├── personas/          # source of truth — one *.conf per identity
 ├── config-files/      # static bases, symlinked into ~ (gitconfig, ssh_config)
 ├── generated/         # derived by `hat sync` (git-ignored)

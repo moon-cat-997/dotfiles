@@ -13,6 +13,7 @@ Usage: git-hat <command> [args]
 
 Commands:
   clone <url>   clone repo using persona for current dir
+  adopt         rewrite GitHub remotes of the current repo to its dir's persona
   whoami        show persona for current dir
   sync          regenerate ssh/git config from personas/ (creates persona dirs)
   keygen        generate missing persona ssh keys, offer upload via gh
@@ -82,6 +83,27 @@ cmd_whoami() {
   fi
 }
 
+# parse_org_repo <url> — печатает 'org/repo' из любого формата URL
+# (scp: git@host:org/repo.git, https://host/org/repo, ssh://git@host/org/repo).
+parse_org_repo() {
+  local path="${1%.git}"       # убрать хвостовой .git
+  path="${path#*://}"          # убрать схему https:// / ssh:// если есть
+  path="${path#*@}"            # убрать user@ если есть
+  path="${path#*[:/]}"         # убрать host + первый ':' или '/'
+
+  if [[ ! "$path" =~ ^[^/]+/[^/]+$ ]]; then
+    return 1
+  fi
+  echo "$path"
+}
+
+# url_host <url> — печатает host из URL (часть до первого ':' или '/')
+url_host() {
+  local h="${1#*://}"   # убрать схему
+  h="${h#*@}"           # убрать user@
+  echo "${h%%[:/]*}"    # оставить только host
+}
+
 # cmd_clone <git-url> — клонирует репозиторий в $PWD под персоной текущей папки.
 # Принимает и scp-форму (git@github.com:org/repo.git), и https-форму.
 cmd_clone() {
@@ -100,12 +122,8 @@ cmd_clone() {
   fi
 
   # 2. вытащить org/repo из любого формата URL
-  local path="${url%.git}"     # убрать хвостовой .git
-  path="${path#*://}"          # убрать схему https:// / ssh:// если есть
-  path="${path#*@}"            # убрать user@ если есть
-  path="${path#*[:/]}"         # убрать host + первый ':' или '/'
-
-  if [[ ! "$path" =~ ^[^/]+/[^/]+$ ]]; then
+  local path
+  if ! path=$(parse_org_repo "$url"); then
     echo "Cannot parse 'org/repo' from URL: $url" >&2
     return 1
   fi
@@ -121,6 +139,63 @@ cmd_clone() {
   local new_url="git@github-${persona}:${path}.git"
   echo "Cloning as '$persona': $new_url"
   git clone "$new_url"
+}
+
+# cmd_adopt — переписывает GitHub-remote'ы текущего репозитория на алиас
+# персоны его каталога: github.com и чужие github-<persona> → github-<своя>.
+# Чинит репозитории, заведённые мимо `hat clone` (git clone / git remote add).
+# Не-GitHub remote'ы (gitlab и т.п.) не трогает.
+cmd_adopt() {
+  # 1. корень репозитория
+  local top
+  if ! top=$(git rev-parse --show-toplevel 2>/dev/null); then
+    echo "Not inside a git repository: $PWD" >&2
+    return 1
+  fi
+
+  # 2. персона по каталогу репозитория
+  local persona
+  if ! persona=$(persona_for_path "$top"); then
+    echo "No persona for repository: $top" >&2
+    echo "Move the repo into a persona directory first (see 'git-hat whoami')." >&2
+    return 1
+  fi
+
+  # 3. пройтись по remote'ам и переписать GitHub-хосты
+  local remotes
+  remotes=$(git remote)
+  if [ -z "$remotes" ]; then
+    echo "No remotes in $top" >&2
+    return 1
+  fi
+
+  local r url host path new_url
+  for r in $remotes; do
+    url=$(git remote get-url "$r")
+    host=$(url_host "$url")
+
+    # трогаем только github.com и github-<persona>-алиасы
+    if [ "$host" != "github.com" ] && [[ "$host" != github-* ]]; then
+      echo "− $r: non-GitHub remote, skipped ($url)"
+      continue
+    fi
+
+    if [ "$host" = "github-$persona" ]; then
+      echo "✔ $r: already correct ($url)"
+      continue
+    fi
+
+    if ! path=$(parse_org_repo "$url"); then
+      echo "✘ $r: cannot parse 'org/repo' from URL: $url" >&2
+      return 1
+    fi
+
+    new_url="git@github-${persona}:${path}.git"
+    git remote set-url "$r" "$new_url"
+    echo "✔ $r: $url → $new_url"
+  done
+
+  echo "Adopted as '$persona' (identity: $(git -C "$top" config user.email))"
 }
 
 # cmd_sync — генерирует ssh_config, gitconfig-<persona> и includeIf-блоки
@@ -288,6 +363,9 @@ main() {
   case "$cmd" in
     clone)
       cmd_clone "$@"
+      ;;
+    adopt)
+      cmd_adopt "$@"
       ;;
     whoami)
       cmd_whoami "$@"
