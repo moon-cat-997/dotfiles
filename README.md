@@ -20,7 +20,7 @@ A personal repository of configuration files and helper scripts for automaticall
 
 ```bash
 # First clone on a fresh machine must be HTTPS — no SSH keys exist yet
-git clone https://github.com/kotikobormotik812/dotfiles.git ~/dotfiles
+git clone https://github.com/moon-cat-997/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
