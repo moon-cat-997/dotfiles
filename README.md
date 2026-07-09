@@ -11,7 +11,7 @@ A personal repository of configuration files and helper scripts for automaticall
 - One-command environment setup via `install.sh`
 - Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
 - Zsh and SSH client configuration
-- Helper scripts (`hat`, `git-whoami`, `update-system`, `copyclip`)
+- Helper scripts (`hat`, `update-system`)
 - Platform-specific setup (Linux; macOS is a stub)
 
 ---
@@ -30,7 +30,9 @@ This will:
 - Create symbolic links for configuration files in your home directory
 - Make all scripts executable and link them into `~/bin`
 - Run `hat sync` to generate per-persona git/ssh configs (and create the persona directories)
-- Run platform-specific setup depending on your OS (installs `gh` on Linux)
+- Run platform-specific setup depending on your OS (on Linux: installs packages
+  incl. `gh` and `keyd`, symlinks `common/keyd/*.conf` into `/etc/keyd`, and
+  enables the `keyd` service)
 
 On a **new machine**, finish the bootstrap with:
 
@@ -49,13 +51,15 @@ See [utilities/git-hat/README.md](utilities/git-hat/README.md) for the full boot
 ```
 dotfiles/
 ├── common/                 # Shared configuration files
-│   └── zshrc
-├── git-scripts/            # Git-related utility scripts
-│   └── git-whoami.sh
+│   ├── zshrc
+│   └── keyd/               # keyd remapping configs, symlinked into /etc/keyd (Linux)
+│       ├── default.conf
+│       └── mice.conf
 ├── linux/                  # Linux-specific setup and tools
-│   ├── copyclip.sh
 │   ├── linux-setup.sh
-│   └── update-system.sh
+│   └── update-system/      # full pacman + AUR system update (see its README)
+│       ├── update-system.sh
+│       └── README.md
 ├── macos/                  # macOS-specific setup (stub)
 │   └── macos-setup.sh
 ├── utilities/
@@ -82,7 +86,6 @@ update-system
 
 ### Check which Git identity is in use:
 ```bash
-git-whoami      # actual name/email git resolves in the current repo
 hat whoami      # persona assigned to the current directory
 ```
 
@@ -121,8 +124,10 @@ Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 ## 📌 Notes
 
 - Make sure `~/bin` is in your `$PATH`
-- All `.sh` files in `git-scripts/` and `linux/` are made executable during installation
+- All `.sh` files in `linux/` are made executable during installation
 - Aliases and environment variables are set in `zshrc` under `common/`
+- `common/keyd/*.conf` are symlinked into `/etc/keyd`, so editing them in the
+  repo changes the live config — apply with `sudo keyd reload`
 - Private SSH keys are never committed; regenerate them with `hat keygen`
 
 ---
