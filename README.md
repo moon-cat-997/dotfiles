@@ -86,7 +86,7 @@ update-system
 
 ### Check which Git identity is in use:
 ```bash
-hat whoami      # persona assigned to the current directory
+hat whoami      # persona for the current directory: name, email, ssh alias
 ```
 
 ### Clone repositories with the right identity:

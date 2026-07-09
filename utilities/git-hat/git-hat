@@ -71,12 +71,14 @@ persona_for_path() {
   fi
 }
 
-# cmd_whoami [path] — печатает персону для пути (по умолчанию — текущая папка)
+# cmd_whoami [path] — печатает персону и её identity для пути (по умолчанию — $PWD).
+# Живой GitHub-логин ключа здесь не показываем (это сетевой ssh-тест) — см. 'hat doctor'.
 cmd_whoami() {
   local path="${1:-$PWD}"          # аргумент, а если нет — $PWD
   local persona
   if persona=$(persona_for_path "$path"); then
-    echo "$persona"
+    load_persona "$persona"        # persona_for_path оставляет вары ПОСЛЕДНЕЙ проверенной персоны
+    echo "$persona — $NAME <$EMAIL> (git@github-$persona)"
   else
     echo "No persona for: $path" >&2
     return 1

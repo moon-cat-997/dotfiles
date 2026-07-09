@@ -40,7 +40,7 @@ Each persona maps to an SSH host alias `github-<name>` (`github-personal`, `gith
 
 `utilities/git-hat/git-hat` is a small dispatcher, symlinked into `~/bin` as both `git-hat` and `hat`, and also usable as the git subcommand `git hat`. Personas are declared once in `utilities/git-hat/personas/<name>.conf` — sourced `KEY="value"` files with `NAME`, `EMAIL`, `KEY`, `DIR`. Commands:
 
-- `hat whoami [path]` — print the persona for the current dir (or given path), by longest-prefix match on each persona's `DIR` (boundary-aware, so `Own-backup` ≠ `Own`).
+- `hat whoami [path]` — print the persona for the current dir (or given path) plus its identity (`personal — Name <email> (git@github-personal)`), by longest-prefix match on each persona's `DIR` (boundary-aware, so `Own-backup` ≠ `Own`). The live GitHub login of the key is `hat doctor`'s job (network).
 - `hat clone <git-url>` — clone into `$PWD`, picking the persona from `$PWD` and rewriting the URL host to `github-<persona>`. Accepts both `git@github.com:org/repo.git` and `https://github.com/org/repo.git`; no persona for the cwd → error.
 - `hat adopt` — fix a repo acquired without `hat clone` (plain `git clone` / `git remote add`): rewrite all GitHub remotes (`github.com`, https form, or a wrong `github-<persona>` alias) of the current repo to the persona of its directory. Non-GitHub remotes untouched; idempotent.
 - `hat sync` — regenerate `ssh_config`, `gitconfig-<persona>` and `includeIf` blocks into `utilities/git-hat/generated/` from `personas/*.conf` (purging configs of removed personas), create each persona's `DIR`, and warn about missing SSH keys.

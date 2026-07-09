@@ -33,7 +33,7 @@ works as a Git subcommand: `git hat whoami`.
 
 | Command | What it does |
 |---|---|
-| `hat whoami [path]` | Print the persona for the current dir (or `path`). |
+| `hat whoami [path]` | Print the persona for the current dir (or `path`) with its identity: `personal — Name <email> (git@github-personal)`. For the *live* GitHub login of the key, see `hat doctor`. |
 | `hat clone <git-url>` | Clone into `$PWD` using the persona of `$PWD`, rewriting the URL host to `github-<persona>`. Accepts `git@github.com:org/repo.git` and `https://github.com/org/repo.git`. |
 | `hat adopt` | Fix a repo acquired *without* `hat clone`: rewrite **all** GitHub remotes (`github.com`, https, or a wrong `github-<persona>` alias) to the persona of the repo's directory. Non-GitHub remotes are left alone. Idempotent. |
 | `hat sync` | Regenerate `generated/` (ssh aliases + git identities) from `personas/*.conf`. Also creates each persona's `DIR` and warns about missing SSH keys. |
