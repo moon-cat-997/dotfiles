@@ -7,6 +7,21 @@ echo "🔧 Running Manjaro/Arch-based Linux setup..."
 # keyd: system-wide key remapping daemon (configs in common/keyd/)
 sudo pacman -Sy --needed git github-cli zsh stow curl wget neovim starship xclip keyd
 
+# yay: AUR helper used by update-system (sudo-based, unlike polkit-based pamac).
+# In Manjaro's extra repo; on vanilla Arch it's AUR-only, so fall back to makepkg.
+# Kept out of the main pacman list — an unknown target there would fail the whole install.
+if ! command -v yay >/dev/null 2>&1; then
+  echo "📥 Installing yay..."
+  if ! sudo pacman -S --needed --noconfirm yay; then
+    echo "  yay not in repos — bootstrapping from AUR..."
+    sudo pacman -S --needed --noconfirm base-devel git
+    yay_tmp=$(mktemp -d)
+    git clone https://aur.archlinux.org/yay-bin.git "$yay_tmp"
+    (cd "$yay_tmp" && makepkg -si --noconfirm)
+    rm -rf "$yay_tmp"
+  fi
+fi
+
 # Optional: Set zsh as default shell
 if [[ "$SHELL" != *zsh ]]; then
     echo "Setting Zsh as default shell..."
