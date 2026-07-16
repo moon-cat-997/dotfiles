@@ -70,7 +70,7 @@ dotfiles/
 │   └── macos-setup.sh
 ├── utilities/
 │   └── git-hat/            # directory-based git identity manager (see its README)
-│       ├── git-hat         # dispatcher (whoami / clone / sync / keygen / doctor)
+│       ├── git-hat         # dispatcher (whoami / clone / remote-add / adopt / sync / keygen / doctor)
 │       ├── personas/       # source of truth — one *.conf per identity
 │       ├── config-files/   # static bases symlinked into ~ (gitconfig, ssh_config)
 │       └── generated/      # derived by `hat sync` (git-ignored)
@@ -99,6 +99,13 @@ hat whoami      # persona for the current directory: name, email, ssh alias
 ```bash
 cd ~/Projects/Own
 hat clone git@github.com:org/repo.git   # clones via the persona's SSH alias
+```
+
+### Add a remote to an existing local repo:
+```bash
+cd ~/Projects/Own/my-repo
+# GitHub suggests `git remote add origin git@github.com:org/repo.git` — use this instead:
+hat remote-add git@github.com:org/repo.git   # adds origin via the persona's SSH alias
 ```
 
 ### Fix a repo cloned without `hat clone`:

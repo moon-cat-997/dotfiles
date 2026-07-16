@@ -12,12 +12,13 @@ usage() {
 Usage: git-hat <command> [args]
 
 Commands:
-  clone <url>   clone repo using persona for current dir
-  adopt         rewrite GitHub remotes of the current repo to its dir's persona
-  whoami        show persona for current dir
-  sync          regenerate ssh/git config from personas/ (creates persona dirs)
-  keygen        generate missing persona ssh keys, offer upload via gh
-  doctor        check machine readiness: gh, keys, dirs, ssh auth per persona
+  clone <url>              clone repo using persona for current dir
+  remote-add <url> [name]  add a remote (default 'origin') under the dir's persona alias
+  adopt                    rewrite GitHub remotes of the current repo to its dir's persona
+  whoami                   show persona for current dir
+  sync                     regenerate ssh/git config from personas/ (creates persona dirs)
+  keygen                   generate missing persona ssh keys, offer upload via gh
+  doctor                   check machine readiness: gh, keys, dirs, ssh auth per persona
 EOF
 }
 
@@ -141,6 +142,57 @@ cmd_clone() {
   local new_url="git@github-${persona}:${path}.git"
   echo "Cloning as '$persona': $new_url"
   git clone "$new_url"
+}
+
+# cmd_remote_add <git-url> [remote-name] — добавляет remote текущему репозиторию
+# под алиасом персоны его каталога (remote-name по умолчанию 'origin').
+# Закрывает сценарий "уже есть локальный репо + свежесозданный GitHub-репо":
+# GitHub советует `git remote add origin git@github.com:org/repo.git`, а тут
+# host сразу правильный (github-<persona>) — без последующего `hat adopt`.
+# Принимает и scp-форму (git@github.com:org/repo.git), и https-форму.
+cmd_remote_add() {
+  local url="${1:-}"
+  local remote="${2:-origin}"
+
+  if [ -z "$url" ]; then
+    echo "Usage: git-hat remote-add <git-url> [remote-name]" >&2
+    return 1
+  fi
+
+  # 1. корень репозитория
+  local top
+  if ! top=$(git rev-parse --show-toplevel 2>/dev/null); then
+    echo "Not inside a git repository: $PWD" >&2
+    return 1
+  fi
+
+  # 2. персона по каталогу репозитория
+  local persona
+  if ! persona=$(persona_for_path "$top"); then
+    echo "No persona for repository: $top" >&2
+    echo "Move the repo into a persona directory first (see 'git-hat whoami')." >&2
+    return 1
+  fi
+
+  # 3. remote с таким именем не должен уже существовать
+  if git remote get-url "$remote" >/dev/null 2>&1; then
+    echo "Remote '$remote' already exists: $(git remote get-url "$remote")" >&2
+    echo "Use 'git-hat adopt' to rewrite existing remotes." >&2
+    return 1
+  fi
+
+  # 4. вытащить org/repo из любого формата URL
+  local path
+  if ! path=$(parse_org_repo "$url"); then
+    echo "Cannot parse 'org/repo' from URL: $url" >&2
+    return 1
+  fi
+
+  # 5. добавить remote под алиасом персоны
+  local new_url="git@github-${persona}:${path}.git"
+  git remote add "$remote" "$new_url"
+  echo "✔ $remote → $new_url"
+  echo "Added as '$persona' (identity: $(git -C "$top" config user.email))"
 }
 
 # cmd_adopt — переписывает GitHub-remote'ы текущего репозитория на алиас
@@ -365,6 +417,9 @@ main() {
   case "$cmd" in
     clone)
       cmd_clone "$@"
+      ;;
+    remote-add)
+      cmd_remote_add "$@"
       ;;
     adopt)
       cmd_adopt "$@"

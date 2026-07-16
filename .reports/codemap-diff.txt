@@ -1,0 +1,32 @@
+Codemap generation report
+Generated: 2026-07-16
+Repo: ~/dotfiles (personal dotfiles — shell + config only)
+
+STATUS: initial generation (no previous codemaps existed)
+
+Codemaps written to docs/CODEMAPS/:
+  architecture.md    system overview, symlink model, ~/bin commands
+  install-flow.md    install.sh step order, linux-setup, update-system
+  git-hat.md         per-directory git identity subsystem (largest component, 447 lines)
+  claude-config.md   portable Claude Code config surface (common/claude/**)
+  dependencies.md    external tools + runtime relationships
+
+Standard set adapted: backend/frontend/data codemaps do not apply to a
+config-only repo. Replaced with install-flow, git-hat, claude-config.
+
+Source files scanned:
+  install.sh (108), linux/linux-setup.sh (50), linux/update-system/update-system.sh (29),
+  macos/macos-setup.sh (3 stub), utilities/git-hat/git-hat (447),
+  personas/*.conf (3), config-files/{gitconfig,ssh_config},
+  common/keyd/*.conf (2), common/zshrc, common/claude/** (settings, hooks,
+  scripts, 11 commands, ~10 skills, 89 rule files)
+
+Notable since repo state:
+  - NEW: `hat remote-add` command (utilities/git-hat/git-hat) — captured in git-hat.md
+  - common/claude/ is largely untracked in git (18 tracked files total)
+
+Dependencies detected:
+  pacman set (git github-cli zsh stow curl wget neovim starship xclip keyd),
+  yay (AUR), Claude Code CLI, gh (credential helper), keyd (systemd)
+
+Staleness: n/a (first generation).
