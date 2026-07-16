@@ -11,6 +11,7 @@ A personal repository of configuration files and helper scripts for automaticall
 - One-command environment setup via `install.sh`
 - Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
 - Zsh and SSH client configuration
+- Claude Code setup synced across machines (settings, statusline, skills, hooks, rules)
 - Helper scripts (`hat`, `update-system`)
 - Platform-specific setup (Linux; macOS is a stub)
 
@@ -31,8 +32,8 @@ This will:
 - Make all scripts executable and link them into `~/bin`
 - Run `hat sync` to generate per-persona git/ssh configs (and create the persona directories)
 - Run platform-specific setup depending on your OS (on Linux: installs packages
-  incl. `gh` and `keyd`, symlinks `common/keyd/*.conf` into `/etc/keyd`, and
-  enables the `keyd` service)
+  incl. `gh`, `keyd`, `yay`, and Claude Code; symlinks `common/keyd/*.conf`
+  into `/etc/keyd` and enables the `keyd` service)
 
 On a **new machine**, finish the bootstrap with:
 
@@ -52,6 +53,11 @@ See [utilities/git-hat/README.md](utilities/git-hat/README.md) for the full boot
 dotfiles/
 ├── common/                 # Shared configuration files
 │   ├── zshrc
+│   ├── claude/             # Claude Code configs, symlinked into ~/.claude
+│   │   ├── settings.json   # statusline, hooks, permissions, plugins
+│   │   ├── CLAUDE.md       # global instructions
+│   │   ├── statusline-command.sh
+│   │   ├── hooks/ scripts/ skills/ commands/ rules/
 │   └── keyd/               # keyd remapping configs, symlinked into /etc/keyd (Linux)
 │       ├── default.conf
 │       └── mice.conf

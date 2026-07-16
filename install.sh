@@ -28,6 +28,25 @@ ln -sf "$GP_CONFIG/gitconfig"  ~/.gitconfig
 ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
 
+# Link Claude Code configs (settings, statusline, global CLAUDE.md,
+# hooks/scripts, skills, commands, rules) from common/claude/ into ~/.claude.
+# -n: replace an existing dir symlink instead of descending into it.
+# A pre-existing REAL file/dir (fresh machine where Claude Code ran first)
+# is backed up once as *.pre-dotfiles rather than clobbered.
+echo "- Linking Claude Code configs..."
+mkdir -p ~/.claude
+for item in settings.json CLAUDE.md statusline-command.sh hooks scripts skills commands rules; do
+  src=~/dotfiles/common/claude/$item
+  dst=~/.claude/$item
+  [ -e "$src" ] || continue
+  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+    mv "$dst" "$dst.pre-dotfiles"
+    echo "  (backed up existing $item → $item.pre-dotfiles)"
+  fi
+  ln -sfn "$src" "$dst"
+  echo "  ✔ Linked $item"
+done
+
 # Make git-scripts executable and link them
 # (the dir may be absent — git doesn't track empty directories)
 echo "- Linking git scripts..."

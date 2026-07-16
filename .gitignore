@@ -27,3 +27,7 @@ id_dsa
 
 # git-hat generated output (derived from personas/*.conf via `hat sync`)
 utilities/git-hat/generated/
+
+# Claude Code local caches and retired/archived skills (not portable state)
+.impeccable/
+*.retired.tar.gz

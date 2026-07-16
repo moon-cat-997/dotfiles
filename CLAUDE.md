@@ -12,13 +12,19 @@ Personal dotfiles for Linux (Manjaro/Arch, primary) and macOS (stub). The repo i
 cd ~/dotfiles && ./install.sh
 ```
 
-`install.sh` is idempotent (`ln -sf`). It links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links every `*.sh` in `git-scripts/`, `linux/` (including one-level subdirectories like `linux/update-system/`), and `macos/` into `~/bin` (stripping the `.sh` extension), links the `git-hat` utility into `~/bin` as both `git-hat` and `hat`, then runs the OS-specific setup (`linux/linux-setup.sh` on Linux). The Linux setup installs the base pacman packages (including `keyd`), installs `yay` (from Manjaro's repos, falling back to an AUR `makepkg` build on vanilla Arch — needed by `update-system`), symlinks `common/keyd/*.conf` into `/etc/keyd/` (sudo), enables the `keyd` service, and runs `keyd reload` — so editing `common/keyd/*.conf` in the repo edits the live `/etc/keyd` config (apply changes with `sudo keyd reload`). There is no build/lint/test step — this repo is shell + config only.
+`install.sh` is idempotent (`ln -sf`). It links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links the Claude Code configs from `common/claude/` into `~/.claude` (see below), links every `*.sh` in `git-scripts/`, `linux/` (including one-level subdirectories like `linux/update-system/`), and `macos/` into `~/bin` (stripping the `.sh` extension), links the `git-hat` utility into `~/bin` as both `git-hat` and `hat`, then runs the OS-specific setup (`linux/linux-setup.sh` on Linux). The Linux setup installs the base pacman packages (including `keyd`), installs `yay` (from Manjaro's repos, falling back to an AUR `makepkg` build on vanilla Arch — needed by `update-system`), installs Claude Code via the official native installer (`claude.ai/install.sh` → `~/.local/bin`, skipped if present), symlinks `common/keyd/*.conf` into `/etc/keyd/` (sudo), enables the `keyd` service, and runs `keyd reload` — so editing `common/keyd/*.conf` in the repo edits the live `/etc/keyd` config (apply changes with `sudo keyd reload`). There is no build/lint/test step — this repo is shell + config only.
 
 ## Critical constraints
 
 - **Clone path is hardcoded.** `install.sh` references `~/dotfiles/...` and the git/ssh configs use absolute `/home/dmitriy/...` paths. The repo must live at `~/dotfiles` for a user named `dmitriy`. Changing the username or location means editing `utilities/git-hat/config-files/gitconfig` (the `includeIf gitdir:` paths) and the `DIR` lines in `utilities/git-hat/personas/*.conf` by hand.
 - **`~/bin` must be on `$PATH`.** `common/zshrc` adds it; all helper scripts are invoked by their basename (`hat`, `git-hat`, `update-system`).
 - **A script is only usable after `install.sh` re-runs** — adding a new `*.sh` to `git-scripts/`/`linux/`/`macos/` does nothing until it's symlinked into `~/bin`.
+
+## Claude Code configs
+
+`common/claude/` is the source of truth for the portable Claude Code setup: `settings.json` (statusline, hooks, permissions, enabled plugins/marketplaces), the global `CLAUDE.md`, `statusline-command.sh`, `hooks/`, `scripts/` (hook runners referenced by settings), `skills/`, `commands/`, and `rules/`. `install.sh` symlinks each into `~/.claude/` (`ln -sfn`; a pre-existing real file/dir is backed up as `*.pre-dotfiles`), so edits in the repo are live immediately — on any machine, including macOS.
+
+Not synced on purpose: `~/.claude.json` (OAuth/MCP servers — secrets and machine state), `~/.claude/settings.local.json` (machine-local overrides), and `~/.claude/plugins/` (Claude Code reinstalls plugins itself from `enabledPlugins` + `extraKnownMarketplaces` in settings.json). Paths inside settings.json use `$HOME`, except the `pika-dev` marketplace `directory` path, which is inherently machine-specific. Caveat: if Claude Code ever rewrites `settings.json` in a way that replaces the symlink with a plain file, re-run `install.sh` and commit the drift.
 
 ## Git identity architecture
 

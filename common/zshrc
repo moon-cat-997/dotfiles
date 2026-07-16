@@ -19,13 +19,13 @@ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 export JAVA_HOME=/usr/lib/jvm/java-11-openjdk
 
 # Aliases
-alias pacup="sudo pacman -Syu"
-alias aup="pamac upgrade --aur"
 alias toju="cd ~/Projects/JuliusAgency"
 alias toown="cd ~/Projects/Own"
 
-# ??? 
+# ???
 [[ ":$PATH:" != *":$HOME/bin:"* ]] && export PATH="$HOME/bin:$PATH"
+# ~/.local/bin: claude (Claude Code native installer) and other user-local tools
+[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && export PATH="$HOME/.local/bin:$PATH"
 
 # Extra keys
 #

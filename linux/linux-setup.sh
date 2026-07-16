@@ -28,6 +28,13 @@ if [[ "$SHELL" != *zsh ]]; then
     chsh -s /bin/zsh
 fi
 
+# Claude Code CLI — not in pacman repos; official native installer
+# (self-updating, installs to ~/.local/bin — on PATH via common/zshrc)
+if ! command -v claude >/dev/null 2>&1; then
+  echo "🤖 Installing Claude Code..."
+  curl -fsSL https://claude.ai/install.sh | bash
+fi
+
 # keyd: symlink configs from the repo into /etc/keyd so edits in
 # common/keyd/*.conf are live in /etc (apply with `sudo keyd reload`)
 echo "⌨️  Setting up keyd..."
