@@ -16,6 +16,8 @@ Commands:
   remote-add <url> [name]  add a remote (default 'origin') under the dir's persona alias
   adopt                    rewrite GitHub remotes of the current repo to its dir's persona
   whoami                   show persona for current dir
+  add <name>               create a new persona interactively (conf + sync)
+  remove <name>            delete a persona (asks confirmation; dir is kept)
   sync                     regenerate ssh/git config from personas/ (creates persona dirs)
   keygen                   generate missing persona ssh keys, offer upload via gh
   doctor                   check machine readiness: gh, keys, dirs, ssh auth per persona
@@ -83,6 +85,164 @@ cmd_whoami() {
   else
     echo "No persona for: $path" >&2
     return 1
+  fi
+}
+
+# ask <prompt> [default] — читает значение (пустой ввод → default, а без
+# default — ошибка). Конфы персон — sourced shell, поэтому символы, ломающие
+# source ($ " ` \), запрещены; '~' разрешён и нормализуется в to_home_var.
+ask() {
+  local prompt="$1" default="${2:-}" val bad='["\\$`]'
+  read -rp "$prompt" val || val=""
+  val="${val:-$default}"
+  if [ -z "$val" ]; then
+    echo "Value required, aborting." >&2
+    return 1
+  fi
+  if [[ "$val" =~ $bad ]]; then
+    echo "Forbidden characters in value (\" \\ \$ \`): $val" >&2
+    return 1
+  fi
+  echo "$val"
+}
+
+# to_home_var <path> — переносимая форма пути: домашний каталог → литеральная
+# строка '$HOME' (раскроется при source на любой машине, как в существующих конфах)
+to_home_var() {
+  local p="$1"
+  case "$p" in
+    "~")       printf '$HOME\n' ;;
+    "~/"*)     printf '$HOME/%s\n' "${p#\~/}" ;;
+    "$HOME"/*) printf '$HOME/%s\n' "${p#"$HOME"/}" ;;
+    *)         printf '%s\n' "$p" ;;
+  esac
+}
+
+# cmd_add <name> — интерактивно создаёт personas/<name>.conf и запускает sync.
+# Дефолты подставляются из имени; ключа после создания ещё нет — предлагаем
+# сразу hat keygen (он пропускает персоны с существующими ключами).
+cmd_add() {
+  local name="${1:-}"
+  if [ -z "$name" ]; then
+    echo "Usage: git-hat add <name>" >&2
+    return 1
+  fi
+
+  # имя станет ssh-алиасом github-<name> и именем файла — только [a-z0-9-]
+  if [[ ! "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    echo "Invalid persona name: '$name' (use lowercase letters, digits, '-')" >&2
+    return 1
+  fi
+
+  local file="$PERSONAS_DIR/$name.conf"
+  if [ -f "$file" ]; then
+    echo "Persona already exists: $file" >&2
+    return 1
+  fi
+
+  echo "Creating persona '$name' (ssh alias: github-$name)"
+  local git_name git_email key dir
+  git_name=$(ask  "  git user.name: ")  || return 1
+  git_email=$(ask "  git user.email: ") || return 1
+  key=$(ask "  ssh key [~/.ssh/id_hat_$name]: " "~/.ssh/id_hat_$name") || return 1
+  dir=$(ask "  root dir [~/Projects/$name]: "  "~/Projects/$name")     || return 1
+  key=$(to_home_var "$key")
+  dir=$(to_home_var "$dir")
+
+  # предупредить о вложенности с DIR других персон: longest-prefix в
+  # persona_for_path разрулит конфликт, но затенение должно быть осознанным
+  local dir_abs other other_abs
+  dir_abs=$(realpath -m "${dir/#\$HOME/$HOME}")
+  for other in $(list_personas); do
+    load_persona "$other"
+    other_abs=$(realpath -m "$DIR")
+    if [ "$dir_abs" = "$other_abs" ] \
+       || [ "${dir_abs#"$other_abs"/}" != "$dir_abs" ] \
+       || [ "${other_abs#"$dir_abs"/}" != "$other_abs" ]; then
+      echo "⚠ dir overlaps persona '$other' ($other_abs) — longest DIR wins inside the overlap"
+    fi
+  done
+
+  {
+    printf 'NAME="%s"\n'  "$git_name"
+    printf 'EMAIL="%s"\n' "$git_email"
+    printf 'KEY="%s"\n'   "$key"
+    printf 'DIR="%s"\n'   "$dir"
+  } > "$file"
+  echo "✔ created $file"
+
+  cmd_sync
+
+  local ans
+  read -rp "Generate missing SSH keys now (hat keygen)? [Y/n] " ans || ans=""
+  if [[ "$ans" =~ ^[Nn]$ ]]; then
+    echo "Run 'hat keygen' later, then 'hat doctor' to verify."
+  else
+    cmd_keygen
+  fi
+}
+
+# cmd_remove <name> — удаляет персону: preflight-отчёт, подтверждение, удаление
+# .conf + sync (sync сам вычищает generated-конфиги удалённых персон).
+# DIR и его содержимое не трогаем никогда; ключ — только по явному согласию.
+cmd_remove() {
+  local name="${1:-}"
+  if [ -z "$name" ]; then
+    echo "Usage: git-hat remove <name>" >&2
+    return 1
+  fi
+
+  if ! load_persona "$name"; then
+    echo "Available personas: $(list_personas | tr '\n' ' ')" >&2
+    return 1
+  fi
+  # зафиксировать поля персоны в локалы до любых дальнейших load_persona
+  local p_dir p_key p_name p_email
+  p_dir=$(realpath -m "$DIR"); p_key="$KEY"; p_name="$NAME"; p_email="$EMAIL"
+
+  echo "Removing persona '$name' — $p_name <$p_email>"
+  echo "  conf: $PERSONAS_DIR/$name.conf (will be deleted)"
+  echo "  dir:  $p_dir (kept — never touched)"
+  echo "  key:  $p_key (kept unless you agree below)"
+
+  # preflight: репозитории в DIR с remote'ами на исчезающий алиас github-<name>
+  local gitdir repo broken=0
+  if [ -d "$p_dir" ]; then
+    while IFS= read -r gitdir; do
+      repo="${gitdir%/.git}"
+      if git -C "$repo" remote -v 2>/dev/null | grep -q "github-$name[:/]"; then
+        [ "$broken" -eq 0 ] && echo "⚠ repos with remotes on 'github-$name' (they will BREAK after removal):"
+        echo "    $repo"
+        broken=1
+      fi
+    done < <(find "$p_dir" -maxdepth 3 -type d -name .git 2>/dev/null)
+    if [ "$broken" -eq 1 ]; then
+      echo "  move them into another persona's dir and run 'hat adopt' there first."
+    fi
+    echo "⚠ repos left under $p_dir will fall back to the default (personal) identity."
+  fi
+
+  local ans
+  read -rp "Delete persona '$name'? [y/N] " ans || ans=""
+  if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    return 1
+  fi
+
+  rm -f "$PERSONAS_DIR/$name.conf"
+  echo "✔ removed $name.conf"
+  cmd_sync
+
+  # ключ — отдельное явное согласие; pubkey на GitHub в любом случае остаётся
+  if [ -f "$p_key" ]; then
+    read -rp "Delete SSH key pair $p_key (+.pub)? [y/N] " ans || ans=""
+    if [[ "$ans" =~ ^[Yy]$ ]]; then
+      rm -f "$p_key" "$p_key.pub"
+      echo "✔ key deleted locally; the public key on GitHub is NOT removed —"
+      echo "  revoke it there: gh ssh-key delete (or https://github.com/settings/keys)"
+    else
+      echo "Key kept: $p_key"
+    fi
   fi
 }
 
@@ -426,6 +586,12 @@ main() {
       ;;
     whoami)
       cmd_whoami "$@"
+      ;;
+    add)
+      cmd_add "$@"
+      ;;
+    remove)
+      cmd_remove "$@"
       ;;
     sync)
       cmd_sync "$@"

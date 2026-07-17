@@ -37,6 +37,8 @@ works as a Git subcommand: `git hat whoami`.
 | `hat clone <git-url>` | Clone into `$PWD` using the persona of `$PWD`, rewriting the URL host to `github-<persona>`. Accepts `git@github.com:org/repo.git` and `https://github.com/org/repo.git`. |
 | `hat remote-add <git-url> [name]` | Add a remote (default `origin`) to the current repo under the persona alias of its directory — the one-step form of GitHub's suggested `git remote add origin git@github.com:org/repo.git` for an existing local repo. Same URL forms as `hat clone`; fails if the remote name already exists (use `hat adopt` for that). |
 | `hat adopt` | Fix a repo acquired *without* `hat clone`: rewrite **all** GitHub remotes (`github.com`, https, or a wrong `github-<persona>` alias) to the persona of the repo's directory. Non-GitHub remotes are left alone. Idempotent. |
+| `hat add <name>` | Create a persona interactively: prompts for name/email/key/dir (with defaults derived from `<name>`), writes `personas/<name>.conf`, runs `hat sync`, and offers `hat keygen`. Warns if the dir overlaps another persona's `DIR`. |
+| `hat remove <name>` | Delete a persona after a confirmation prompt. Shows a preflight report first: repos in its `DIR` whose remotes point at the vanishing `github-<name>` alias, and a reminder that leftover repos fall back to the default identity. The `DIR` is never touched; the SSH key is deleted only on separate explicit consent (the public key on GitHub stays either way). |
 | `hat sync` | Regenerate `generated/` (ssh aliases + git identities) from `personas/*.conf`. Also creates each persona's `DIR` and warns about missing SSH keys. |
 | `hat keygen` | Generate an ed25519 key for every persona whose `KEY` file is missing, then offer to upload the public key to GitHub via `gh ssh-key add`. |
 | `hat doctor` | Health check: `gh` installed & authenticated, generated configs present, and per persona — `DIR` exists, `KEY` exists, and a live `ssh -T` auth test showing which GitHub account the key actually maps to. |
@@ -86,11 +88,29 @@ persona. The file name (`<name>`) becomes the SSH host alias `github-<name>`.
 
 ### Add a persona
 
-1. Create `personas/<name>.conf` with the four fields above.
-2. Run `hat sync`.
+```console
+$ hat add freelance
+```
 
-That regenerates the `github-<name>` SSH alias and the `includeIf` identity
-mapping. Nothing else to edit.
+Prompts for the four fields (with defaults derived from the name), writes the
+conf, runs `hat sync`, and offers to generate the SSH key. Equivalent manual
+flow: create `personas/<name>.conf` with the four fields above and run
+`hat sync` — that regenerates the `github-<name>` SSH alias and the `includeIf`
+identity mapping. Nothing else to edit.
+
+### Remove a persona
+
+```console
+$ hat remove freelance
+```
+
+Asks for confirmation, then deletes the conf and re-syncs (`hat sync` purges
+the generated configs of removed personas by design). Before confirming it
+lists repos in the persona's `DIR` whose remotes still point at the
+`github-<name>` alias — those must be moved and `hat adopt`-ed under another
+persona, or they will break. The `DIR` and its contents are never deleted; the
+SSH key is only deleted if you separately agree, and the public key uploaded to
+GitHub must be revoked there manually.
 
 ## How it works
 
@@ -126,7 +146,7 @@ identities back into `config-files/`; edit `personas/` and re-sync.
 
 ```
 utilities/git-hat/
-├── git-hat            # dispatcher (whoami / clone / remote-add / adopt / sync / keygen / doctor)
+├── git-hat            # dispatcher (whoami / clone / remote-add / adopt / add / remove / sync / keygen / doctor)
 ├── personas/          # source of truth — one *.conf per identity
 ├── config-files/      # static bases, symlinked into ~ (gitconfig, ssh_config)
 ├── generated/         # derived by `hat sync` (git-ignored)

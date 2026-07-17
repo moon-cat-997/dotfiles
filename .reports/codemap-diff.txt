@@ -1,32 +1,35 @@
 Codemap generation report
-Generated: 2026-07-16
+Generated: 2026-07-17
 Repo: ~/dotfiles (personal dotfiles — shell + config only)
+Previous generation: 2026-07-16
 
-STATUS: initial generation (no previous codemaps existed)
+STATUS: incremental update (diff well under 30% — updated in place)
 
-Codemaps written to docs/CODEMAPS/:
-  architecture.md    system overview, symlink model, ~/bin commands
-  install-flow.md    install.sh step order, linux-setup, update-system
-  git-hat.md         per-directory git identity subsystem (largest component, 447 lines)
-  claude-config.md   portable Claude Code config surface (common/claude/**)
-  dependencies.md    external tools + runtime relationships
+Changes since last scan:
 
-Standard set adapted: backend/frontend/data codemaps do not apply to a
-config-only repo. Replaced with install-flow, git-hat, claude-config.
+MODIFIED
+  utilities/git-hat/git-hat        447 → 613 lines
+    + cmd_add    (`hat add <name>`)    interactive persona creation: name validation,
+                                       prompts w/ defaults, DIR-overlap warning,
+                                       conf write, auto-sync, keygen offer
+    + cmd_remove (`hat remove <name>`) confirm-gated deletion: preflight scan for
+                                       repos with remotes on the vanishing alias,
+                                       conf rm + sync; DIR kept, key opt-in delete
+    + helpers: ask (sourced-conf-safe input), to_home_var (~ → literal $HOME)
+  common/claude/settings.json      model "opus" → "fable" (no structural change)
+  CLAUDE.md                        documents hat add/remove
 
-Source files scanned:
-  install.sh (108), linux/linux-setup.sh (50), linux/update-system/update-system.sh (29),
-  macos/macos-setup.sh (3 stub), utilities/git-hat/git-hat (447),
-  personas/*.conf (3), config-files/{gitconfig,ssh_config},
-  common/keyd/*.conf (2), common/zshrc, common/claude/** (settings, hooks,
-  scripts, 11 commands, ~10 skills, 89 rule files)
+SKILLS CHURN (common/claude/skills/, 16 dirs)
+  - removed: dm812-fsd-refactor-loop, dm812-silent-no-op-writes
+  + added:   dm812-frontend-fsd-refactor-loop
 
-Notable since repo state:
-  - NEW: `hat remote-add` command (utilities/git-hat/git-hat) — captured in git-hat.md
-  - common/claude/ is largely untracked in git (18 tracked files total)
+Codemaps updated:
+  git-hat.md         add/remove commands, new helpers, 613-line count
+  claude-config.md   skills count ~10 → 16
 
-Dependencies detected:
-  pacman set (git github-cli zsh stow curl wget neovim starship xclip keyd),
-  yay (AUR), Claude Code CLI, gh (credential helper), keyd (systemd)
+Codemaps unchanged (no architecture drift):
+  architecture.md, install-flow.md, dependencies.md
 
-Staleness: n/a (first generation).
+New dependencies: none
+New routes/services: n/a (config-only repo)
+Staleness: none — all codemaps ≤1 day old
