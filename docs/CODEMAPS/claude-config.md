@@ -1,4 +1,4 @@
-<!-- Generated: 2026-07-16 | Files scanned: common/claude/** | Token estimate: ~600 -->
+<!-- Generated: 2026-07-17 | Files scanned: common/claude/** | Token estimate: ~600 -->
 
 # Claude Code config surface
 
@@ -14,7 +14,7 @@ CLAUDE.md               global instructions (all projects)
 statusline-command.sh   statusline renderer
 hooks/                  claude-notify.sh, hooks.json
 scripts/                hook runners + orchestration (hooks/, lib/, *.js referenced by settings)
-skills/                 ~10 SKILL.md dirs (dm812-*, emil-design-eng, material-3, learned, ...)
+skills/                 16 SKILL.md dirs (dm812-*, emil-design-eng, material-3, learned, ...)
 commands/               11 slash commands (docs, e2e, eval, orchestrate, tdd, verify, ...)
 rules/                  89 files: common/ + per-language (typescript, python, golang, web, ...) + zh/
 ```
