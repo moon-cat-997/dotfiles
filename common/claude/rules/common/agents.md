@@ -2,20 +2,22 @@
 
 ## Available Agents
 
-Located in `~/.claude/agents/`:
+Provided by the ECC plugin — invoke with the `ecc:` prefix (there is no
+`~/.claude/agents/` directory; the plugin registry is the source of truth,
+and it carries many more agents than this core set):
 
 | Agent | Purpose | When to Use |
 |-------|---------|-------------|
-| planner | Implementation planning | Complex features, refactoring |
-| architect | System design | Architectural decisions |
-| tdd-guide | Test-driven development | New features, bug fixes |
-| code-reviewer | Code review | After writing code |
-| security-reviewer | Security analysis | Before commits |
-| build-error-resolver | Fix build errors | When build fails |
-| e2e-runner | E2E testing | Critical user flows |
-| refactor-cleaner | Dead code cleanup | Code maintenance |
-| doc-updater | Documentation | Updating docs |
-| rust-reviewer | Rust code review | Rust projects |
+| ecc:planner | Implementation planning | Complex features, refactoring |
+| ecc:architect | System design | Architectural decisions |
+| ecc:tdd-guide | Test-driven development | New features, bug fixes |
+| ecc:code-reviewer | Code review | After writing code |
+| ecc:security-reviewer | Security analysis | Before commits |
+| ecc:build-error-resolver | Fix build errors | When build fails |
+| ecc:e2e-runner | E2E testing | Critical user flows |
+| ecc:refactor-cleaner | Dead code cleanup | Code maintenance |
+| ecc:doc-updater | Documentation | Updating docs |
+| ecc:typescript-reviewer / ecc:react-reviewer / ecc:rust-reviewer … | Language/framework review | Match to the project stack |
 
 ## Immediate Agent Usage
 
