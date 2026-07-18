@@ -1,10 +1,10 @@
 ---
-name: dm812-frontend-fsd-refactor-loop
+name: dml-frontend-fsd-refactor-loop
 description: Autonomous overnight refactoring of an FSD (Feature-Sliced Design) frontend, layer by layer, from shared/ up through app/. Aligned with FSD 2.1 (pages-first, public-API/@x rules, Steiger gate). Combines architect → refactor-cleaner → code-reviewer agents with verify-gates between layers. Safe to launch unattended. Use when the user wants senior-level code quality, dedup, single-source-of-truth, dead-code removal across the whole frontend.
 origin: personal-dm812
 ---
 
-# dm812-frontend-fsd-refactor-loop
+# dml-frontend-fsd-refactor-loop
 
 Multi-layer FSD refactor orchestration. Encodes the layer-by-layer flow we used on polybet (commits 5ffebef → fd8f1a6) plus safeguards we wished we had on the first pass. Aligned with the official FSD 2.1 docs (feature-sliced.design) — see the canon section below.
 

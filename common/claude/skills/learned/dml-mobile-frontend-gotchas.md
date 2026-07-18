@@ -1,5 +1,5 @@
 ---
-name: dm812-mobile-frontend-gotchas
+name: dml-mobile-frontend-gotchas
 description: Mobile/responsive front-end gotchas and fixes — horizontal scroll that survives an overflow-x guard (fixed/portaled elements), touch-tap stuck focus/hover, swipe-to-dismiss bottom sheets, and how to actually test these (Playwright tap vs click, reproduce geometry, WebKit-from-Blink diagnosis). Use when building or debugging responsive web UI, especially when a fix works in Chrome devtools but not on a real phone.
 origin: personal-dm812
 ---
