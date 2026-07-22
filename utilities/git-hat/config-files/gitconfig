@@ -1,14 +1,19 @@
 # Static git settings only.
 # Persona identities are GENERATED from utilities/git-hat/personas/*.conf
 # via `hat sync` into ../generated/. Edit identities in personas/, NOT here.
+#
+# Paths here are ~-relative on purpose: git expands '~/' in include.path, so the
+# same file works under /home/<user> (Linux) and /Users/<user> (macOS).
+# A missing include is silently ignored by git — an absolute /home/... path here
+# would leave a Mac with NO identities and no error.
 
 # Default identity (personal); persona directories override it below.
 [include]
-	path = /home/dmitriy/dotfiles/utilities/git-hat/generated/gitconfig-personal
+	path = ~/dotfiles/utilities/git-hat/generated/gitconfig-personal
 
 # Per-persona identity by directory (Own→personal, JuliusAgency→office, Own-old→work)
 [include]
-	path = /home/dmitriy/dotfiles/utilities/git-hat/generated/gitconfig-includes
+	path = ~/dotfiles/utilities/git-hat/generated/gitconfig-includes
 
 [alias]
 	ch = checkout
@@ -20,10 +25,10 @@
 
 [credential "https://github.com"]
 	helper = 
-	helper = !/usr/bin/gh auth git-credential
+	helper = !gh auth git-credential
 
 [credential "https://gist.github.com"]
 	helper = 
-	helper = !/usr/bin/gh auth git-credential
+	helper = !gh auth git-credential
 [credential "https://git.heroku.com"]
 	helper = !heroku git:credentials

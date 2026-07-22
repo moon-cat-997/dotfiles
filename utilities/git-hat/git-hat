@@ -2,10 +2,56 @@
 set -euo pipefail
 shopt -s nullglob   # незамэтченный glob раскрывается в пустоту, а не в литерал '*'
 
-# readlink -f разыменовывает симлинк (~/bin/git-hat, ~/bin/hat → реальный файл в репо),
-# иначе SCRIPT_DIR указал бы на ~/bin, где нет personas/.
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+# resolve_symlink <path> — разыменовывает цепочку симлинков (~/bin/git-hat,
+# ~/bin/hat → реальный файл в репо), иначе SCRIPT_DIR указал бы на ~/bin, где
+# нет personas/. Раньше здесь был `readlink -f`, но -f — GNU-расширение,
+# в BSD/macOS его нет; `readlink` без флагов есть везде, поэтому идём вручную.
+resolve_symlink() {
+  local src="$1" dir
+  while [ -L "$src" ]; do
+    dir=$(cd -P "$(dirname "$src")" && pwd)
+    src=$(readlink "$src")
+    case "$src" in
+      /*) ;;                  # абсолютный target — как есть
+      *)  src="$dir/$src" ;;  # относительный — от каталога симлинка
+    esac
+  done
+  printf '%s\n' "$src"
+}
+
+SCRIPT_DIR="$(cd -P "$(dirname "$(resolve_symlink "${BASH_SOURCE[0]}")")" && pwd)"
 PERSONAS_DIR="$SCRIPT_DIR/personas"
+
+# normalize_path <path> — переносимая замена `realpath -m` (флаг -m есть только
+# в GNU coreutils; в BSD/macOS realpath его не знает). Как и -m, не требует
+# существования пути: существующий каталог разыменовываем через `cd -P`,
+# несуществующий — схлопываем лексически ('.', '..', пустые сегменты).
+normalize_path() {
+  local p="$1" out="" part rest
+
+  case "$p" in
+    /*) ;;                # уже абсолютный
+    *)  p="$PWD/$p" ;;    # относительный — от текущего каталога
+  esac
+
+  if [ -d "$p" ]; then
+    (cd -P "$p" 2>/dev/null && pwd) && return 0
+  fi
+
+  # Лексическая нормализация. Разбор через ${var%%/*} вместо `for x in $p`:
+  # незакавыченное расширение попало бы под globbing (в скрипте включён nullglob).
+  rest="${p#/}"
+  while [ -n "$rest" ]; do
+    part="${rest%%/*}"
+    if [ "$part" = "$rest" ]; then rest=""; else rest="${rest#*/}"; fi
+    case "$part" in
+      ''|.) ;;                      # пустой сегмент ('//') и '.' — пропустить
+      ..)   out="${out%/*}" ;;      # подняться на уровень вверх
+      *)    out="$out/$part" ;;
+    esac
+  done
+  printf '%s\n' "${out:-/}"
+}
 
 usage() {
   cat >&2 <<'EOF'
@@ -47,14 +93,14 @@ load_persona() {
 # Совпадение по границе '/', при нескольких — выигрывает самое длинное DIR.
 persona_for_path() {
   local path
-  path=$(realpath -m "$1")            # нормализуем входной путь
+  path=$(normalize_path "$1")         # нормализуем входной путь
 
   local best_name="" best_len=0       # лучшее совпадение пока пустое
 
   local name dir
   for name in $(list_personas); do
     load_persona "$name"              # подгрузит DIR этой персоны из .conf
-    dir=$(realpath -m "$DIR")         # нормализуем её каталог
+    dir=$(normalize_path "$DIR")      # нормализуем её каталог
 
     # path внутри dir (или равен) — по границе '/'
     if [ "$path" = "$dir" ] || [ "${path#"$dir"/}" != "$path" ]; then
@@ -152,10 +198,10 @@ cmd_add() {
   # предупредить о вложенности с DIR других персон: longest-prefix в
   # persona_for_path разрулит конфликт, но затенение должно быть осознанным
   local dir_abs other other_abs
-  dir_abs=$(realpath -m "${dir/#\$HOME/$HOME}")
+  dir_abs=$(normalize_path "${dir/#\$HOME/$HOME}")
   for other in $(list_personas); do
     load_persona "$other"
-    other_abs=$(realpath -m "$DIR")
+    other_abs=$(normalize_path "$DIR")
     if [ "$dir_abs" = "$other_abs" ] \
        || [ "${dir_abs#"$other_abs"/}" != "$dir_abs" ] \
        || [ "${other_abs#"$dir_abs"/}" != "$other_abs" ]; then
@@ -198,7 +244,7 @@ cmd_remove() {
   fi
   # зафиксировать поля персоны в локалы до любых дальнейших load_persona
   local p_dir p_key p_name p_email
-  p_dir=$(realpath -m "$DIR"); p_key="$KEY"; p_name="$NAME"; p_email="$EMAIL"
+  p_dir=$(normalize_path "$DIR"); p_key="$KEY"; p_name="$NAME"; p_email="$EMAIL"
 
   echo "Removing persona '$name' — $p_name <$p_email>"
   echo "  conf: $PERSONAS_DIR/$name.conf (will be deleted)"

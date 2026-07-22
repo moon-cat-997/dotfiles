@@ -1,3 +1,7 @@
 # SSH host aliases (github-<persona>) are GENERATED from
 # utilities/git-hat/personas/*.conf via `hat sync`. Edit personas/, then run `hat sync`.
-Include /home/dmitriy/dotfiles/utilities/git-hat/generated/ssh_config
+#
+# ~-relative on purpose: ssh expands '~/' in Include, so the same file works under
+# /home/<user> (Linux) and /Users/<user> (macOS). ssh ignores a missing Include
+# silently — an absolute /home/... path would leave a Mac with no github-* aliases.
+Include ~/dotfiles/utilities/git-hat/generated/ssh_config

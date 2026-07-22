@@ -16,7 +16,7 @@ cd ~/dotfiles && ./install.sh
 
 ## Critical constraints
 
-- **Clone path is hardcoded.** `install.sh` references `~/dotfiles/...` and the git/ssh configs use absolute `/home/dmitriy/...` paths. The repo must live at `~/dotfiles` for a user named `dmitriy`. Changing the username or location means editing `utilities/git-hat/config-files/gitconfig` (the `includeIf gitdir:` paths) and the `DIR` lines in `utilities/git-hat/personas/*.conf` by hand.
+- **Clone path is hardcoded, but the username is not.** `install.sh` and the git/ssh config bases reference `~/dotfiles/...`, and persona `DIR`/`KEY` values are stored as literal `$HOME/...`, so the repo works for any username on both `/home/<user>` (Linux) and `/Users/<user>` (macOS). It must still live at `~/dotfiles`. Keep it that way: git silently ignores a missing `include.path` and ssh silently ignores a missing `Include`, so an absolute path that's wrong on another machine fails with no error at all — you just get no identities.
 - **`~/bin` must be on `$PATH`.** `common/zshrc` adds it; all helper scripts are invoked by their basename (`hat`, `git-hat`, `update-system`).
 - **A script is only usable after `install.sh` re-runs** — adding a new `*.sh` to `git-scripts/`/`linux/`/`macos/` does nothing until it's symlinked into `~/bin`.
 
