@@ -22,7 +22,10 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
+  "sandbox": {
+    "autoAllowBashIfSandboxed": true
+  },
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
       {
