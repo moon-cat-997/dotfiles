@@ -1,0 +1,24 @@
+# macOS package set, applied by platform/macos/setup.sh via `brew bundle`.
+# The Linux counterpart is platform/linux/packages.txt — see the note there on
+# why these two lists are intentionally separate rather than a mapped pair.
+
+brew "git"        # newer than the Xcode CLT one
+brew "gh"         # gitconfig delegates HTTPS credentials to `gh`
+brew "stow"
+brew "wget"
+brew "neovim"
+brew "starship"
+
+# Claude Code hooks and statusline-command.sh all shell out to node.
+brew "node"
+
+# Deliberately absent, and why:
+#   zsh    — macOS ships 5.9; setup.sh chsh's to the system one
+#   curl   — built in
+#   xclip  — no counterpart; macOS has pbcopy/pbpaste built in
+#   keyd   — Linux-only daemon. The nearest macOS tool is Karabiner-Elements,
+#            but it needs an Input Monitoring grant and its own JSON config, and
+#            platform/linux/keyd/*.conf do not translate to it. Installing a
+#            system input interceptor unattended is not something an install
+#            script should do, so uncomment this yourself if you want it:
+# cask "karabiner-elements"

@@ -1,0 +1,27 @@
+# Base packages installed by platform/linux/setup.sh via pacman.
+# One name per line; '#' comments and blank lines are ignored.
+#
+# This is deliberately NOT shared with platform/macos/Brewfile: of the entries
+# below, four are built into macOS, one has no macOS counterpart, and one is a
+# different product entirely. A cross-OS name-mapping layer would be more code
+# than the two lists it replaced.
+#
+# yay is NOT here on purpose — an unknown target makes pacman fail the whole
+# transaction, and yay is AUR-only on vanilla Arch. setup.sh bootstraps it.
+
+git
+github-cli        # gitconfig delegates HTTPS credentials to `gh`
+zsh
+stow
+curl
+wget
+neovim
+starship
+xclip             # macOS equivalent (pbcopy/pbpaste) is built in
+
+# Claude Code hooks and statusline-command.sh all shell out to node.
+# Without this a fresh machine gets a Claude setup that errors on every hook.
+nodejs
+npm
+
+keyd              # system-wide key remapping; configs in platform/linux/keyd/

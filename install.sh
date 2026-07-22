@@ -1,10 +1,17 @@
 #!/bin/bash
+#
+# Entry point. Three phases, in order:
+#   1. shared    — links that are identical on every OS
+#   2. platform  — platform/<os>/setup.sh owns packages and OS-specific wiring
+#   3. sync      — the cross-platform "buttons": agent CLIs, then their configs
+#
+# Anything OS-specific belongs in platform/, not here. Paths are ~-relative
+# throughout, so the username does not matter; the repo location (~/dotfiles)
+# is still assumed. See CLAUDE.md.
 
 set -e
 
 echo "- Installing dotfiles..."
-
-# TODO: paths hardcode /home/dmitriy (see CLAUDE.md) — ask about username one day
 
 # Detect OS
 OS="$(uname -s)"
@@ -18,6 +25,8 @@ mkdir -p ~/bin
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 
+# ── 1. Shared ────────────────────────────────────────────────────────────────
+
 # Link config files
 #   git/ssh configs live under utilities/git-hat/config-files/
 #   zshrc lives under common/
@@ -28,9 +37,11 @@ ln -sf "$GP_CONFIG/gitconfig"  ~/.gitconfig
 ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
 
-# Make git-scripts executable and link them
+# Cross-platform helper scripts → ~/bin.
 # (the dir may be absent — git doesn't track empty directories)
-echo "- Linking git scripts..."
+# OS-specific scripts are NOT linked here: each platform/<os>/setup.sh links its
+# own bin/, so a Mac never gets pacman-based tools like update-system on PATH.
+echo "- Linking common scripts..."
 for script in ~/dotfiles/git-scripts/*.sh; do
   [ -e "$script" ] || continue
   chmod +x "$script"
@@ -39,32 +50,12 @@ for script in ~/dotfiles/git-scripts/*.sh; do
   echo "  ✔ Linked $name"
 done
 
-# Make linux-scripts executable and link them
-# (top-level and one-level subdirectories, e.g. linux/update-system/)
-echo "- Linking linux scripts..."
-for script in ~/dotfiles/linux/*.sh ~/dotfiles/linux/*/*.sh; do
-  [ -e "$script" ] || continue
-  chmod +x "$script"
-  name=$(basename "$script" .sh)
-  ln -sf "$script" "$HOME/bin/$name"
-  echo "  ✔ Linked $name"
-done
-
-# Make macos executable and link them
-echo "- Linking git scripts..."
-for script in ~/dotfiles/macos/*.sh; do
-  chmod +x "$script"
-  name=$(basename "$script" .sh)
-  ln -sf "$script" "$HOME/bin/$name"
-  echo "  ✔ Linked $name"
-done 
-
-
-# Link claude-sync (the Claude Code config "button", also called below)
-echo "- Linking claude-sync..."
-chmod +x ~/dotfiles/common/claude/claude-sync.sh
+# Link the sync buttons (both are also invoked at the end of this script)
+echo "- Linking sync buttons..."
+chmod +x ~/dotfiles/common/claude/claude-sync.sh ~/dotfiles/common/codex/codex-sync.sh
 ln -sf ~/dotfiles/common/claude/claude-sync.sh "$HOME/bin/claude-sync"
-echo "  ✔ Linked claude-sync"
+ln -sf ~/dotfiles/common/codex/codex-sync.sh   "$HOME/bin/codex-sync"
+echo "  ✔ Linked claude-sync, codex-sync"
 
 # Link git-hat utility (usable as `git-hat`, `git hat`, or `hat`)
 echo "- Linking git-hat..."
@@ -77,14 +68,16 @@ echo "  ✔ Linked git-hat, hat"
 echo "- Generating git-hat configs..."
 ~/dotfiles/utilities/git-hat/git-hat sync
 
-# Run OS-specific setup
+# ── 2. Platform ──────────────────────────────────────────────────────────────
+
 case "$OS" in
   Linux)
     echo "🐧 Running Linux setup..."
-    bash ~/dotfiles/linux/linux-setup.sh
+    bash ~/dotfiles/platform/linux/setup.sh
     ;;
   Darwin)
-    echo "🍎 macOS support is not yet implemented."
+    echo "🍎 Running macOS setup..."
+    bash ~/dotfiles/platform/macos/setup.sh
     ;;
   *)
     echo "❌ Unsupported OS: $OS"
@@ -92,8 +85,16 @@ case "$OS" in
     ;;
 esac
 
+# ── 3. Sync ──────────────────────────────────────────────────────────────────
+
+# Agent CLIs (claude, codex). After the platform setup so curl/brew exist,
+# before the sync buttons so claude-sync can register MCP servers.
+bash ~/dotfiles/common/install-agents.sh
+
 # Sync Claude Code configs (symlinks + user-scope MCP servers).
-# Runs after OS setup so a fresh machine already has the claude CLI installed.
 bash ~/dotfiles/common/claude/claude-sync.sh
+
+# Sync Codex configs (global instructions, selected skills, managed config baseline).
+bash ~/dotfiles/common/codex/codex-sync.sh
 
 echo "✅ Done!"

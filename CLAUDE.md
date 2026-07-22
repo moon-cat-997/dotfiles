@@ -12,13 +12,26 @@ Personal dotfiles for Linux (Manjaro/Arch, primary) and macOS (stub). The repo i
 cd ~/dotfiles && ./install.sh
 ```
 
-`install.sh` is idempotent (`ln -sf`). It links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links every `*.sh` in `git-scripts/`, `linux/` (including one-level subdirectories like `linux/update-system/`), and `macos/` into `~/bin` (stripping the `.sh` extension), links the `git-hat` utility into `~/bin` as both `git-hat` and `hat` and `common/claude/claude-sync.sh` into `~/bin` as `claude-sync`, runs the OS-specific setup (`linux/linux-setup.sh` on Linux), then runs `claude-sync` to apply the Claude Code configs (see below — it runs last so a fresh machine already has the `claude` CLI installed by the OS setup). The Linux setup installs the base pacman packages (including `keyd`), installs `yay` (from Manjaro's repos, falling back to an AUR `makepkg` build on vanilla Arch — needed by `update-system`), installs Claude Code via the official native installer (`claude.ai/install.sh` → `~/.local/bin`, skipped if present), symlinks `common/keyd/*.conf` into `/etc/keyd/` (sudo), enables the `keyd` service, and runs `keyd reload` — so editing `common/keyd/*.conf` in the repo edits the live `/etc/keyd` config (apply changes with `sudo keyd reload`). There is no build/lint/test step — this repo is shell + config only.
+`install.sh` is idempotent (`ln -sf`) and runs in three phases:
+
+1. **Shared** — links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links every `*.sh` in `git-scripts/` into `~/bin` (stripping the `.sh`), links `git-hat` into `~/bin` as both `git-hat` and `hat`, links the two sync buttons as `claude-sync`/`codex-sync`, then runs `hat sync` to generate the per-persona identity configs.
+2. **Platform** — dispatches on `uname -s` to `platform/linux/setup.sh` or `platform/macos/setup.sh`. Each owns its own package list *and* links its own `bin/` into `~/bin`, which is why a Mac never ends up with pacman-based tools like `update-system` on its PATH.
+3. **Sync** — `common/install-agents.sh` (the agent CLIs — same on both OSes), then `claude-sync`, then `codex-sync`. Runs last so the CLIs exist before their configs are applied.
+
+The **Linux** setup installs the packages listed in `platform/linux/packages.txt` via pacman, installs `yay` (from Manjaro's repos, falling back to an AUR `makepkg` build on vanilla Arch — needed by `update-system`), sets zsh as the login shell, links `platform/linux/bin/*.sh` into `~/bin`, symlinks `platform/linux/keyd/*.conf` into `/etc/keyd/` (sudo), enables the `keyd` service and runs `keyd reload` — so editing `platform/linux/keyd/*.conf` in the repo edits the live `/etc/keyd` config (apply changes with `sudo keyd reload`).
+
+The **macOS** setup requires the Xcode Command Line Tools (it triggers the installer and asks you to re-run if they're missing, since `xcode-select --install` is an async GUI dialog), installs Homebrew if absent, `eval`s `brew shellenv` (the installer doesn't touch the running shell, and the prefix differs between Apple Silicon and Intel), then applies `platform/macos/Brewfile` via `brew bundle`.
+
+The two package lists are deliberately **not** a mapped pair — of the Linux entries, several are built into macOS, `xclip` has no counterpart, and `keyd` is a different product entirely, so a shared name-mapping layer would be more code than the two lists it replaced. See the header comments in both files.
+
+There is no build/lint/test step — this repo is shell + config only.
 
 ## Critical constraints
 
 - **Clone path is hardcoded, but the username is not.** `install.sh` and the git/ssh config bases reference `~/dotfiles/...`, and persona `DIR`/`KEY` values are stored as literal `$HOME/...`, so the repo works for any username on both `/home/<user>` (Linux) and `/Users/<user>` (macOS). It must still live at `~/dotfiles`. Keep it that way: git silently ignores a missing `include.path` and ssh silently ignores a missing `Include`, so an absolute path that's wrong on another machine fails with no error at all — you just get no identities.
 - **`~/bin` must be on `$PATH`.** `common/zshrc` adds it; all helper scripts are invoked by their basename (`hat`, `git-hat`, `update-system`).
-- **A script is only usable after `install.sh` re-runs** — adding a new `*.sh` to `git-scripts/`/`linux/`/`macos/` does nothing until it's symlinked into `~/bin`.
+- **A script is only usable after `install.sh` re-runs** — adding a new `*.sh` to `git-scripts/` or `platform/<os>/bin/` does nothing until it's symlinked into `~/bin`.
+- **`~/.claude/*` are symlinks into this repo.** `claude-sync` links `settings.json`, `CLAUDE.md`, `hooks`, `scripts`, `skills`, `commands` and `rules` from `common/claude/`. Anything that "manages" those paths under `~/.claude` is therefore editing tracked files in `~/dotfiles` — a tool that rebuilds `~/.claude/rules/` will delete this repo's `rules/` content. `claude-sync` detects the plain-file drift case (`settings.json`) but cannot catch a directory rebuilt in place. Check `git status` after running any Claude Code installer/configurator.
 
 ## Claude Code configs
 
@@ -66,8 +79,10 @@ GitHub HTTPS credentials are delegated to `gh auth git-credential` (configured i
 
 ## When editing
 
-- New shell scripts intended as global commands go in `git-scripts/` (git-related) or `linux/` (system) and require re-running `install.sh` to become available.
+- New shell scripts intended as global commands go in `git-scripts/` if they work on every OS, or `platform/<os>/bin/` if they don't. Either way, re-run `install.sh` to make them available. Putting an OS-specific script in `git-scripts/` is the mistake to avoid — it will be linked into `~/bin` on both platforms.
+- New packages go in `platform/linux/packages.txt` or `platform/macos/Brewfile`, not into a setup script. Adding something to one list does **not** imply adding it to the other; see the "why these lists are separate" note in each file.
 - To add a git persona: run `hat add <name>` (or manually create `utilities/git-hat/personas/<name>.conf` with `NAME`/`EMAIL`/`KEY`/`DIR` and run `hat sync`) — that regenerates the `github-<name>` ssh alias and the `includeIf` identity mapping. The persona's `DIR` doubles as both the `includeIf` match and the `hat clone` destination root. To delete one: `hat remove <name>` (confirmation-gated; never touches the persona's DIR).
-- keyd configs live in `common/keyd/*.conf` (symlinked into `/etc/keyd/` by the Linux setup). A new `*.conf` there needs a re-run of `install.sh` (or a manual `sudo ln -sf`) to be linked; content edits to already-linked files are live immediately but need `sudo keyd reload` to take effect.
+- keyd configs live in `platform/linux/keyd/*.conf` (symlinked into `/etc/keyd/` by the Linux setup — Linux-only, which is why they are not under `common/`). A new `*.conf` there needs a re-run of `install.sh` (or a manual `sudo ln -sf`) to be linked; content edits to already-linked files are live immediately but need `sudo keyd reload` to take effect.
 - `*.pub` files are gitignored alongside private keys — SSH keys themselves are never committed; `ssh_config` only references key paths.
-- macOS support is a stub (`macos/macos-setup.sh` exits 0); the Darwin branch in `install.sh` is unimplemented.
+- macOS is implemented but has **not been run on a real Mac** — it is verified only by a sandboxed dual-branch run of `install.sh` with stubbed `brew`/`sudo`. Expect to shake out Homebrew-prefix and permission details on first real use.
+- The Codex CLI is deliberately not auto-installed by `common/install-agents.sh` (its distribution channel differs per platform and changes often); `codex-sync` writes the config regardless, so the CLI can arrive later.

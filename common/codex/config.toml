@@ -1,0 +1,17 @@
+personality = "pragmatic"
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+
+[mcp_servers.base44]
+url = "https://app.base44.com/mcp"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.Jam]
+url = "https://mcp.jam.dev/mcp"
+
+[mcp_servers.mobbin]
+url = "https://api.mobbin.com/mcp"

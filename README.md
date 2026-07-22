@@ -12,8 +12,9 @@ A personal repository of configuration files and helper scripts for automaticall
 - Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
 - Zsh and SSH client configuration
 - Claude Code setup synced across machines (settings, statusline, skills, hooks, rules)
+- Codex setup synced across machines with a native baseline (AGENTS.md, selected skills, MCP defaults)
 - Helper scripts (`hat`, `update-system`)
-- Platform-specific setup (Linux; macOS is a stub)
+- Platform-specific setup split under `platform/` (Linux and macOS, separate package lists)
 
 ---
 
@@ -31,9 +32,11 @@ This will:
 - Create symbolic links for configuration files in your home directory
 - Make all scripts executable and link them into `~/bin`
 - Run `hat sync` to generate per-persona git/ssh configs (and create the persona directories)
-- Run platform-specific setup depending on your OS (on Linux: installs packages
-  incl. `gh`, `keyd`, `yay`, and Claude Code; symlinks `common/keyd/*.conf`
-  into `/etc/keyd` and enables the `keyd` service)
+- Run platform-specific setup depending on your OS — `platform/linux/setup.sh`
+  (pacman packages from `packages.txt`, `yay`, keyd into `/etc/keyd`) or
+  `platform/macos/setup.sh` (Homebrew + `Brewfile`)
+- Install the agent CLIs, then apply the Claude and Codex configs
+  (`claude-sync`, `codex-sync`)
 
 On a **new machine**, finish the bootstrap with:
 
@@ -58,16 +61,25 @@ dotfiles/
 │   │   ├── CLAUDE.md       # global instructions
 │   │   ├── statusline-command.sh
 │   │   ├── hooks/ scripts/ skills/ commands/ rules/
-│   └── keyd/               # keyd remapping configs, symlinked into /etc/keyd (Linux)
-│       ├── default.conf
-│       └── mice.conf
-├── linux/                  # Linux-specific setup and tools
-│   ├── linux-setup.sh
-│   └── update-system/      # full pacman + AUR system update (see its README)
-│       ├── update-system.sh
-│       └── README.md
-├── macos/                  # macOS-specific setup (stub)
-│   └── macos-setup.sh
+│   ├── codex/              # Codex baseline synced into ~/.codex
+│   │   ├── config.toml     # managed baseline merged into live config
+│   │   ├── AGENTS.md       # global instructions
+│   │   ├── codex-sync.sh
+│   │   └── skills/
+│   └── install-agents.sh   # installs the agent CLIs — same on both OSes
+├── platform/               # everything OS-specific lives here
+│   ├── linux/
+│   │   ├── setup.sh        # pacman, yay, keyd, login shell
+│   │   ├── packages.txt    # the pacman package list
+│   │   ├── keyd/           # remapping configs, symlinked into /etc/keyd
+│   │   │   ├── default.conf
+│   │   │   └── mice.conf
+│   │   └── bin/            # Linux-only commands, linked into ~/bin
+│   │       ├── update-system.sh   # full pacman + AUR update (see its README)
+│   │       └── README.md
+│   └── macos/
+│       ├── setup.sh        # Xcode CLT, Homebrew, login shell
+│       └── Brewfile        # the brew package list
 ├── utilities/
 │   └── git-hat/            # directory-based git identity manager (see its README)
 │       ├── git-hat         # dispatcher (whoami / clone / remote-add / adopt / sync / keygen / doctor)
@@ -136,16 +148,16 @@ Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 ## 🐧 Supported Platforms
 
 - ✅ Linux (tested on Manjaro)
-- ⚠️ macOS (basic support, work in progress)
+- ⚠️ macOS (implemented, but not yet run on a real Mac — verified only in a sandboxed dual-branch install)
 
 ---
 
 ## 📌 Notes
 
 - Make sure `~/bin` is in your `$PATH`
-- All `.sh` files in `linux/` are made executable during installation
+- All `.sh` files in `git-scripts/` and `platform/<os>/bin/` are made executable and linked into `~/bin` during installation. OS-specific ones are linked only by their own platform.
 - Aliases and environment variables are set in `zshrc` under `common/`
-- `common/keyd/*.conf` are symlinked into `/etc/keyd`, so editing them in the
+- `platform/linux/keyd/*.conf` are symlinked into `/etc/keyd`, so editing them in the
   repo changes the live config — apply with `sudo keyd reload`
 - Private SSH keys are never committed; regenerate them with `hat keygen`
 
@@ -153,8 +165,8 @@ Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 
 ## 🧩 Planned Improvements
 
-- Ask about username instead of hardcoding `/home/dmitriy`
+- ~~Ask about username instead of hardcoding `/home/dmitriy`~~ — done: all paths are `~`-relative
 - Auto-install of Zsh plugins and fonts
-- Homebrew integration on macOS
+- ~~Homebrew integration on macOS~~ — done: `platform/macos/Brewfile`
 - Automatic backup of existing config files before linking
 - Dotfiles version detection and self-update logic
