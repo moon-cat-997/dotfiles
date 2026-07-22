@@ -1,43 +1,85 @@
-<!-- Generated: 2026-07-16 | Files scanned: install.sh, linux-setup.sh, update-system.sh | Token estimate: ~600 -->
+<!-- Generated: 2026-07-22 | Files scanned: install.sh, platform/**, common/install-agents.sh, claude-sync.sh, codex-sync.sh | Token estimate: ~780 -->
 
 # Install Flow
 
-Entry point: `install.sh` (108 lines). Idempotent; `set -e`.
+Entry point: `install.sh` (~100 lines). Idempotent; `set -e`.
+Three phases: **shared → platform → sync**. Anything OS-specific lives in
+`platform/`, never in `install.sh`.
 
 ## install.sh — step order
 
 ```
-1. mkdir ~/bin, ~/.ssh (chmod 700)
-2. Link static configs:
+   mkdir ~/bin, ~/.ssh (chmod 700); OS="$(uname -s)"
+
+1. SHARED
+   Link static configs:
      utilities/git-hat/config-files/gitconfig  → ~/.gitconfig
      utilities/git-hat/config-files/ssh_config → ~/.ssh/config
-     common/zshrc                               → ~/.zshrc
-3. Link Claude configs (loop) → ~/.claude/<item>
-     items: settings.json CLAUDE.md statusline-command.sh hooks scripts skills commands rules
-     ln -sfn; pre-existing REAL file/dir backed up once as *.pre-dotfiles
-4. Link scripts → ~/bin/<basename .sh>:
+     common/zshrc                              → ~/.zshrc
+   Link cross-OS scripts → ~/bin/<basename .sh>:
      git-scripts/*.sh   (dir may be absent)
-     linux/*.sh linux/*/*.sh   (top-level + 1 subdir deep)
-     macos/*.sh
-5. Link git-hat → ~/bin/{git-hat,hat}
-6. Run `git-hat sync`  (regenerate generated/ from personas/)
-7. OS branch:
-     Linux  → bash linux/linux-setup.sh
-     Darwin → no-op message (unimplemented)
+   Link buttons/utilities → ~/bin:
+     claude-sync, codex-sync, git-hat, hat
+   Run `git-hat sync`  (regenerate generated/ from personas/)
+
+2. PLATFORM  (dispatch on uname -s)
+     Linux  → bash platform/linux/setup.sh
+     Darwin → bash platform/macos/setup.sh
      other  → exit 1
+
+3. SYNC
+   bash common/install-agents.sh          (agent CLIs — same on both OSes)
+   bash common/claude/claude-sync.sh
+   bash common/codex/codex-sync.sh
 ```
 
-## linux/linux-setup.sh (50 lines)
+Ordering rationale: platform setup runs before phase 3 so `curl`/`brew` exist;
+`install-agents.sh` runs before the sync buttons so `claude mcp add` can register
+the user-scope MCP servers.
+
+**Each platform links its own `bin/`** — `install.sh` deliberately does not glob
+OS-specific script dirs. That is what keeps pacman-based `update-system` off a
+Mac's PATH.
+
+Claude config linking + MCP restore lives in `claude-sync.sh`; see
+claude-config.md for internals (symlink loop, drift repair, MCP registration).
+Codex config linking + baseline merge lives in `codex-sync.sh`; see codex-sync.md.
+
+## platform/linux/setup.sh (~68 lines)
 
 ```
-- pacman -Sy --needed: git github-cli zsh stow curl wget neovim starship xclip keyd
-- yay: pacman install, else bootstrap from AUR (yay-bin via makepkg)   # needed by update-system
+- packages: sed-strip comments from packages.txt → pacman -Sy --needed $packages
+- yay: pacman install, else bootstrap from AUR (yay-bin via makepkg)  # needed by update-system
 - chsh -s /bin/zsh if not already zsh
-- Claude Code CLI: curl claude.ai/install.sh | bash  (skipped if `claude` present → ~/.local/bin)
-- keyd: symlink common/keyd/*.conf → /etc/keyd/, systemctl enable --now keyd, keyd reload
+- link platform/linux/bin/*.sh and bin/*/*.sh → ~/bin
+- keyd: symlink platform/linux/keyd/*.conf → /etc/keyd/, systemctl enable --now keyd, keyd reload
 ```
 
-## linux/update-system/update-system.sh (29 lines) → `update-system`
+## platform/macos/setup.sh (~67 lines)
+
+```
+- Xcode CLT: xcode-select -p guard; triggers installer and exits 1 asking for a
+    re-run (xcode-select --install is an async GUI dialog — cannot be waited on)
+- Homebrew: install if absent, then eval "$(brew shellenv)" from /opt/homebrew
+    or /usr/local (prefix differs Apple Silicon vs Intel; installer does not
+    touch the running shell). Hard-fails if brew is still not on PATH.
+- brew bundle --file platform/macos/Brewfile
+- chsh -s /bin/zsh if not already zsh
+- link platform/macos/bin/*.sh → ~/bin  (dir optional; glob is guarded)
+```
+
+## common/install-agents.sh (~36 lines)
+
+```
+- claude: curl claude.ai/install.sh | bash  → ~/.local/bin  (skipped if present)
+- codex:  NOT auto-installed — distribution channel differs per platform and
+          changes often. Prints a hint; codex-sync writes the config regardless.
+```
+
+Lives in `common/` because the installer is identical on both OSes. It used to
+sit inside the Linux branch, where a Mac would never have reached it.
+
+## platform/linux/bin/update-system.sh (29 lines) → `update-system`
 
 ```
 - guard: yay present else exit 1
@@ -46,9 +88,12 @@ Entry point: `install.sh` (108 lines). Idempotent; `set -e`.
 - yay -Sua   (AUR; sudo-based, covered by upfront auth — pamac avoided, it re-prompts via polkit)
 ```
 
-## macos/macos-setup.sh — stub (`exit 0`); Darwin branch in install.sh unimplemented.
-
 ## Gotchas
 
-- Editing `common/keyd/*.conf` is live in `/etc` (symlinked) but needs `sudo keyd reload`.
-- If Claude Code rewrites `settings.json` into a plain file (breaking the symlink), re-run `install.sh`.
+- Editing `platform/linux/keyd/*.conf` is live in `/etc` (symlinked) but needs `sudo keyd reload`.
+- If Claude Code rewrites `settings.json` into a plain file (breaking the symlink),
+  re-run `claude-sync` — it saves the drift as `settings.json.drift-<timestamp>` and relinks.
+- macOS is implemented but unverified on real hardware — only a sandboxed dual-branch
+  run of `install.sh` with stubbed `brew`/`sudo`.
+- Adding a package to one platform list does **not** imply the other; the lists are
+  intentionally unmapped (see architecture.md).
