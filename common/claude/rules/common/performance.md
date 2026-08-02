@@ -2,23 +2,20 @@
 
 ## Model Selection Strategy
 
-Match the model tier to the task. Names below are current as of 2026-07;
-verify against the live lineup before hard-pinning a model ID.
-
-**Haiku 4.5** (fastest, cheapest):
+**Haiku** (90% of Sonnet capability, 3x cost savings):
 - Lightweight agents with frequent invocation
+- Pair programming and code generation
 - Worker agents in multi-agent systems
 
-**Sonnet 5** (workhorse):
+**Sonnet** (Best coding model):
 - Main development work
 - Orchestrating multi-agent workflows
+- Complex coding tasks
 
-**Opus 4.8** (deep reasoning; supports fast mode):
+**Opus** (Deepest reasoning):
 - Complex architectural decisions
+- Maximum reasoning requirements
 - Research and analysis tasks
-
-**Fable 5** (Mythos-class, most capable):
-- Hardest reasoning, long-horizon agentic work
 
 ## Context Window Management
 
@@ -40,7 +37,7 @@ Extended thinking is enabled by default, reserving up to 31,999 tokens for inter
 Control extended thinking via:
 - **Toggle**: Option+T (macOS) / Alt+T (Windows/Linux)
 - **Config**: Set `alwaysThinkingEnabled` in `~/.claude/settings.json`
-- **Budget cap**: `export MAX_THINKING_TOKENS=10000`
+- **Budget cap**: `export MAX_THINKING_TOKENS=10000` (bash) or `$env:MAX_THINKING_TOKENS = "10000"` (PowerShell)
 - **Verbose mode**: Ctrl+O to see thinking output
 
 For complex tasks requiring deep reasoning:
