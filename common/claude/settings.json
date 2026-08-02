@@ -22,9 +22,6 @@
     ],
     "defaultMode": "auto"
   },
-  "sandbox": {
-    "autoAllowBashIfSandboxed": true
-  },
   "model": "opus",
   "hooks": {
     "PreToolUse": [
@@ -346,10 +343,10 @@
     "typescript-lsp@claude-plugins-official": true,
     "impeccable@impeccable": true,
     "ecc@everything-claude-code": true,
-    "julius@julius-dev": false,
     "pika@pika-dev": false,
     "gsap-skills@gsap-skills": false,
-    "clangd-lsp@claude-plugins-official": false
+    "clangd-lsp@claude-plugins-official": false,
+    "julius@julius-dev": true
   },
   "extraKnownMarketplaces": {
     "expo-plugins": {
@@ -402,6 +399,9 @@
         "repo": "greensock/gsap-skills"
       }
     }
+  },
+  "sandbox": {
+    "autoAllowBashIfSandboxed": true
   },
   "effortLevel": "high",
   "tui": "fullscreen",
