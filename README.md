@@ -63,7 +63,8 @@ dotfiles/
 │   │   ├── lua/plugins/    # per-plugin overrides (markdown, …)
 │   │   ├── lazyvim.json    # which LazyVim "extras" (language bundles) are on
 │   │   ├── lazy-lock.json  # plugin versions pinned to exact commits
-│   │   └── CHEATSHEET.md   # keybindings + rollback
+│   │   ├── CHEATSHEET.md   # keybindings + rollback
+│   │   └── ARCHITECTURE.md # how the config works; read this before changing it
 │   ├── claude/             # Claude Code configs, symlinked into ~/.claude
 │   │   ├── settings.json   # statusline, hooks, permissions, plugins
 │   │   ├── CLAUDE.md       # global instructions
