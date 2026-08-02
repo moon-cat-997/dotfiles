@@ -29,5 +29,13 @@ alias toown="cd ~/Projects/Own"
 
 # Extra keys
 #
-# Ctrl+Backspace removes a whole word  
+# Ctrl+Backspace removes a whole word
 bindkey '^H' backward-kill-word
+export PATH=$PATH:$HOME/.maestro/bin
+
+# Neovim as the default editor. Anything that shells out to an editor — `git commit`,
+# `git rebase -i`, `crontab -e`, `gh pr create` — reads EDITOR (and VISUAL, which
+# some tools prefer for full-screen editors), so both are set to the same value.
+export EDITOR=nvim
+export VISUAL=nvim
+alias v=nvim

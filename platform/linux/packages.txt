@@ -17,11 +17,26 @@ curl
 wget
 neovim
 starship
-xclip             # macOS equivalent (pbcopy/pbpaste) is built in
+xclip             # X11 clipboard bridge; macOS (pbcopy/pbpaste) has it built in
+wl-clipboard      # the Wayland counterpart of xclip — nvim sets clipboard=unnamedplus,
+                  # which silently misbehaves under Wayland with only xclip installed.
+                  # Both are listed because the session type is not known at install time.
 
 # Claude Code hooks and statusline-command.sh all shell out to node.
 # Without this a fresh machine gets a Claude setup that errors on every hook.
 nodejs
 npm
+
+# Neovim IDE toolchain (config in common/nvim, symlinked to ~/.config/nvim).
+# Without these the config still loads, but core features fail — mostly silently,
+# which is why each one is declared rather than left to whatever the machine has.
+ripgrep           # project-wide text search; the fuzzy finder shells out to it
+fd                # fast file listing for the file picker
+fzf               # fuzzy matcher behind fzf-lua, LazyVim's default picker
+lazygit           # git UI opened in a popup with <leader>gg
+tree-sitter-cli   # REQUIRED: nvim-treesitter's main branch compiles parsers with it,
+                  # and without it syntax highlighting fails to install with no error
+clang             # provides clangd, the C++ language server
+cmake             # C++ builds; clangd reads the compile_commands.json it generates
 
 keyd              # system-wide key remapping; configs in platform/linux/keyd/

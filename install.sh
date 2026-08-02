@@ -37,6 +37,17 @@ ln -sf "$GP_CONFIG/gitconfig"  ~/.gitconfig
 ln -sf "$GP_CONFIG/ssh_config" ~/.ssh/config
 ln -sf ~/dotfiles/common/zshrc ~/.zshrc
 
+# Neovim (LazyVim). Unlike the links above this one targets a *directory*, so:
+#   -n  do not dereference an existing ~/.config/nvim — without it `ln -sf` would
+#       create the link *inside* that directory as ~/.config/nvim/nvim, leaving a
+#       config that loads nothing and gives no error explaining why.
+#   mkdir -p ~/.config  — the parent may be absent on a fresh machine, and set -e
+#       would abort the whole install on the failed link.
+# Plugins/LSP binaries under ~/.local/share/nvim are machine state and are NOT
+# linked; a first `nvim` launch installs them, pinned by the tracked lazy-lock.json.
+mkdir -p ~/.config
+ln -sfn ~/dotfiles/common/nvim ~/.config/nvim
+
 # Cross-platform helper scripts → ~/bin.
 # (the dir may be absent — git doesn't track empty directories)
 # OS-specific scripts are NOT linked here: each platform/<os>/setup.sh links its

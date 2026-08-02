@@ -12,10 +12,27 @@ brew "starship"
 # Claude Code hooks and statusline-command.sh all shell out to node.
 brew "node"
 
+# Neovim IDE toolchain (config in common/nvim, symlinked to ~/.config/nvim).
+# Without these the config still loads, but core features fail — mostly silently.
+brew "ripgrep"       # project-wide text search; the fuzzy finder shells out to it
+brew "fd"            # fast file listing for the file picker
+brew "fzf"           # fuzzy matcher behind fzf-lua, LazyVim's default picker
+brew "lazygit"       # git UI opened in a popup with <leader>gg
+brew "tree-sitter"   # REQUIRED: provides the tree-sitter CLI that nvim-treesitter's
+                     # main branch compiles parsers with. The Linux package is named
+                     # tree-sitter-cli; on Homebrew the CLI ships in this formula.
+brew "cmake"         # C++ builds; clangd reads the compile_commands.json it generates
+
 # Deliberately absent, and why:
-#   zsh    — macOS ships 5.9; setup.sh chsh's to the system one
-#   curl   — built in
-#   xclip  — no counterpart; macOS has pbcopy/pbpaste built in
+#   zsh          — macOS ships 5.9; setup.sh chsh's to the system one
+#   curl         — built in
+#   xclip        — no counterpart; macOS has pbcopy/pbpaste built in
+#   wl-clipboard — Wayland-only; irrelevant on macOS for the same reason
+#   clang        — the Xcode Command Line Tools (a hard prerequisite of
+#                  platform/macos/setup.sh) already ship clang and clangd, so
+#                  `brew "llvm"` would install a second, keg-only toolchain that
+#                  is not on PATH by default. Add it only if clangd turns out to
+#                  be missing on a real Mac — this branch is still unverified.
 #   keyd   — Linux-only daemon. The nearest macOS tool is Karabiner-Elements,
 #            but it needs an Input Monitoring grant and its own JSON config, and
 #            platform/linux/keyd/*.conf do not translate to it. Installing a

@@ -14,7 +14,7 @@ cd ~/dotfiles && ./install.sh
 
 `install.sh` is idempotent (`ln -sf`) and runs in three phases:
 
-1. **Shared** — links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links every `*.sh` in `git-scripts/` into `~/bin` (stripping the `.sh`), links `git-hat` into `~/bin` as both `git-hat` and `hat`, links the two sync buttons as `claude-sync`/`codex-sync`, then runs `hat sync` to generate the per-persona identity configs.
+1. **Shared** — links the git/ssh configs from `utilities/git-hat/config-files/` and `common/zshrc` into `~`, links `common/nvim` to `~/.config/nvim` (with `ln -sfn`, see the Neovim section), links every `*.sh` in `git-scripts/` into `~/bin` (stripping the `.sh`), links `git-hat` into `~/bin` as both `git-hat` and `hat`, links the two sync buttons as `claude-sync`/`codex-sync`, then runs `hat sync` to generate the per-persona identity configs.
 2. **Platform** — dispatches on `uname -s` to `platform/linux/setup.sh` or `platform/macos/setup.sh`. Each owns its own package list *and* links its own `bin/` into `~/bin`, which is why a Mac never ends up with pacman-based tools like `update-system` on its PATH.
 3. **Sync** — `common/install-agents.sh` (the agent CLIs — same on both OSes), then `claude-sync`, then `codex-sync`. Runs last so the CLIs exist before their configs are applied.
 
@@ -40,6 +40,21 @@ There is no build/lint/test step — this repo is shell + config only.
 `common/claude/claude-sync.sh` (in `~/bin` as `claude-sync`, also called at the end of `install.sh`) is the one button that applies it all, idempotently: it symlinks each config into `~/.claude/` (`ln -sfn`; a pre-existing real file/dir is backed up as `*.pre-dotfiles`), then registers every server from `mcp-servers.conf` that's missing via `claude mcp add --scope user --transport http` (skipped with a notice if the `claude` CLI isn't on PATH). It never performs any login: Claude auth is a one-time `claude` login per machine, and each MCP server OAuths lazily on first use. Edits in the repo are live immediately — on any machine, including macOS; to add an MCP server, add a line to `mcp-servers.conf` and run `claude-sync`.
 
 Not synced on purpose: `~/.claude.json` (machine state; MCP server entries are restored from `mcp-servers.conf` instead), `~/.claude/.credentials.json` / macOS Keychain (OAuth tokens), `~/.claude/settings.local.json` (machine-local overrides), and `~/.claude/plugins/` (Claude Code reinstalls plugins itself from `enabledPlugins` + `extraKnownMarketplaces` in settings.json). Paths inside settings.json use `$HOME`, except the `pika-dev` marketplace `directory` path, which is inherently machine-specific (that plugin stays inactive on a machine until `~/Projects/Own/pika-orch` exists). If Claude Code ever rewrites `settings.json` in a way that replaces the symlink with a plain file, `claude-sync` detects the drift, saves the file as `settings.json.drift-<timestamp>` for diffing into the repo, and restores the symlink.
+
+## Neovim
+
+`common/nvim/` is a [LazyVim](https://www.lazyvim.org) config, symlinked to `~/.config/nvim` by the Shared phase of `install.sh`. Editing files there is live in the editor immediately, like every other config in this repo.
+
+The link is created with **`ln -sfn`**, not `ln -sf`. The target is a directory, and plain `ln -sf` onto an existing directory creates the link *inside* it (`~/.config/nvim/nvim`), producing a config that loads nothing and reports no error. `install.sh` also `mkdir -p ~/.config` first, for the same reason it pre-creates `~/.ssh`: on a fresh machine the parent may not exist and `set -e` would abort the install.
+
+Tracked vs. machine state — the same split this repo applies to Claude Code:
+
+- **Tracked:** `init.lua`, `lua/config/*`, `lua/plugins/*`, `stylua.toml`, `.neoconf.json`, plus two generated-but-committed files — `lazyvim.json` (which LazyVim *extras*, i.e. language bundles, are enabled) and `lazy-lock.json` (every plugin pinned to an exact commit, the reason a new machine reproduces this setup rather than whatever upstream is that day).
+- **Not tracked:** `~/.local/share/nvim` (plugins, Mason-installed language servers), `~/.local/state/nvim` (undo, sessions, logs), `~/.cache/nvim`. A first `nvim` launch rebuilds them.
+
+Language support is added by toggling extras in `:LazyExtras`, which rewrites `lazyvim.json` — prefer that over hand-editing plugin specs. Per-plugin tweaks go in `lua/plugins/<name>.lua` as an `opts`/`keys` override; defining a `config = function()` there **replaces** LazyVim's own setup call instead of extending it, which is the usual way these overrides silently break (see `lua/plugins/markdown.lua` for the pattern).
+
+The toolchain nvim shells out to is declared in the platform package lists, not installed by nvim: `ripgrep`, `fd`, `fzf`, `lazygit`, `tree-sitter-cli`, `clang`, `cmake` (+ `wl-clipboard` on Linux). `tree-sitter-cli` is the non-obvious one — nvim-treesitter's `main` branch compiles parsers with it, and without it syntax highlighting fails to install without a useful error.
 
 ## Git identity architecture
 
@@ -81,6 +96,7 @@ GitHub HTTPS credentials are delegated to `gh auth git-credential` (configured i
 
 - New shell scripts intended as global commands go in `git-scripts/` if they work on every OS, or `platform/<os>/bin/` if they don't. Either way, re-run `install.sh` to make them available. Putting an OS-specific script in `git-scripts/` is the mistake to avoid — it will be linked into `~/bin` on both platforms.
 - New packages go in `platform/linux/packages.txt` or `platform/macos/Brewfile`, not into a setup script. Adding something to one list does **not** imply adding it to the other; see the "why these lists are separate" note in each file.
+- Neovim changes go in `common/nvim/` and are live immediately (it is symlinked). Language support is toggled with `:LazyExtras`, not by hand-editing specs; per-plugin tweaks are `opts`/`keys` overrides in `lua/plugins/`, never a `config = function()`. Commit `lazy-lock.json` along with any plugin change — it is what pins the setup for other machines.
 - To add a git persona: run `hat add <name>` (or manually create `utilities/git-hat/personas/<name>.conf` with `NAME`/`EMAIL`/`KEY`/`DIR` and run `hat sync`) — that regenerates the `github-<name>` ssh alias and the `includeIf` identity mapping. The persona's `DIR` doubles as both the `includeIf` match and the `hat clone` destination root. To delete one: `hat remove <name>` (confirmation-gated; never touches the persona's DIR).
 - keyd configs live in `platform/linux/keyd/*.conf` (symlinked into `/etc/keyd/` by the Linux setup — Linux-only, which is why they are not under `common/`). A new `*.conf` there needs a re-run of `install.sh` (or a manual `sudo ln -sf`) to be linked; content edits to already-linked files are live immediately but need `sudo keyd reload` to take effect.
 - `*.pub` files are gitignored alongside private keys — SSH keys themselves are never committed; `ssh_config` only references key paths.

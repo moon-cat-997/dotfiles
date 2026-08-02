@@ -11,6 +11,7 @@ A personal repository of configuration files and helper scripts for automaticall
 - One-command environment setup via `install.sh`
 - Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
 - Zsh and SSH client configuration
+- Neovim configured as an IDE (LazyVim) for TypeScript/React, Python and C++
 - Claude Code setup synced across machines (settings, statusline, skills, hooks, rules)
 - Codex setup synced across machines with a native baseline (AGENTS.md, selected skills, MCP defaults)
 - Helper scripts (`hat`, `update-system`)
@@ -56,6 +57,13 @@ See [utilities/git-hat/README.md](utilities/git-hat/README.md) for the full boot
 dotfiles/
 ├── common/                 # Shared configuration files
 │   ├── zshrc
+│   ├── nvim/               # LazyVim config, symlinked to ~/.config/nvim
+│   │   ├── init.lua
+│   │   ├── lua/config/     # options, keymaps, autocmds, lazy bootstrap
+│   │   ├── lua/plugins/    # per-plugin overrides (markdown, …)
+│   │   ├── lazyvim.json    # which LazyVim "extras" (language bundles) are on
+│   │   ├── lazy-lock.json  # plugin versions pinned to exact commits
+│   │   └── CHEATSHEET.md   # keybindings + rollback
 │   ├── claude/             # Claude Code configs, symlinked into ~/.claude
 │   │   ├── settings.json   # statusline, hooks, permissions, plugins
 │   │   ├── CLAUDE.md       # global instructions
@@ -159,6 +167,10 @@ Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 - Aliases and environment variables are set in `zshrc` under `common/`
 - `platform/linux/keyd/*.conf` are symlinked into `/etc/keyd`, so editing them in the
   repo changes the live config — apply with `sudo keyd reload`
+- `common/nvim/` is symlinked to `~/.config/nvim`, so edits there are live in the editor
+  immediately. Downloaded plugins and language servers live in `~/.local/share/nvim` and are
+  **not** tracked — a first `nvim` launch on a new machine installs them, pinned by the
+  committed `lazy-lock.json`. See [common/nvim/CHEATSHEET.md](common/nvim/CHEATSHEET.md).
 - Private SSH keys are never committed; regenerate them with `hat keygen`
 
 ---
