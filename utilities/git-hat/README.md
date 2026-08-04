@@ -39,9 +39,11 @@ works as a Git subcommand: `git hat whoami`.
 | `hat adopt` | Fix a repo acquired *without* `hat clone`: rewrite **all** GitHub remotes (`github.com`, https, or a wrong `github-<persona>` alias) to the persona of the repo's directory. Non-GitHub remotes are left alone. Idempotent. |
 | `hat add <name>` | Create a persona interactively: prompts for name/email/key/dir (with defaults derived from `<name>`), writes `personas/<name>.conf`, runs `hat sync`, and offers `hat keygen`. Warns if the dir overlaps another persona's `DIR`. |
 | `hat remove <name>` | Delete a persona after a confirmation prompt. Shows a preflight report first: repos in its `DIR` whose remotes point at the vanishing `github-<name>` alias, and a reminder that leftover repos fall back to the default identity. The `DIR` is never touched; the SSH key is deleted only on separate explicit consent (the public key on GitHub stays either way). |
-| `hat sync` | Regenerate `generated/` (ssh aliases + git identities) from `personas/*.conf`. Also creates each persona's `DIR` and warns about missing SSH keys. |
+| `hat sync` | Regenerate `generated/` (ssh aliases + git identities) from `personas/*.conf`. Also creates each persona's `DIR`, warns about missing SSH keys, and writes the `.envrc` for personas that declare `TOKENS=`. |
 | `hat keygen` | Generate an ed25519 key for every persona whose `KEY` file is missing, then offer to upload the public key to GitHub via `gh ssh-key add`. |
-| `hat doctor` | Health check: `gh` installed & authenticated, generated configs present, and per persona — `DIR` exists, `KEY` exists, and a live `ssh -T` auth test showing which GitHub account the key actually maps to. |
+| `hat token list` | Print the known CLI account tokens: variable → CLI → the command `doctor` verifies it with. |
+| `hat token set <persona> <VAR>` | Store a CLI access token for a persona at `~/.config/hat/<persona>/<VAR>` (mode 600). Prompts without echoing — the token is never accepted as an argument, which would put it in shell history. See [CLI account tokens](#cli-account-tokens). |
+| `hat doctor` | Health check: `gh` installed & authenticated, generated configs present, and per persona — `DIR` exists, `KEY` exists, and a live `ssh -T` auth test showing which GitHub account the key actually maps to. For personas with `TOKENS=`, also: `.envrc` present, each token file readable and mode 600, and a live identity check per CLI (`eas whoami`, …). |
 
 ## New machine bootstrap
 
@@ -111,6 +113,102 @@ lists repos in the persona's `DIR` whose remotes still point at the
 persona, or they will break. The `DIR` and its contents are never deleted; the
 SSH key is only deleted if you separately agree, and the public key uploaded to
 GitHub must be revoked there manually.
+
+## CLI account tokens
+
+Every SaaS CLI stores **one** global login: `eas` and `expo` share
+`~/.expo/state.json`, `supabase` uses `~/.supabase`, `gh` keeps its accounts in
+the system keyring. Logging in as a second account logs the first one out, so a
+work account and a personal side project fight over the same slot.
+
+All of them also accept an **access token in an environment variable**, which
+takes precedence over the stored login — that path exists so CI can run without
+an interactive login. It makes the account selectable per directory, which is
+exactly what `git-hat` already does for git and SSH.
+
+### How it fits the persona
+
+A persona gains one optional field naming the tokens that identity owns:
+
+```bash
+NAME="Ada Lovelace"
+EMAIL="ada@example.com"
+KEY="$HOME/.ssh/id_ada"
+DIR="$HOME/Projects/Personal"
+TOKENS="EXPO_TOKEN SUPABASE_ACCESS_TOKEN"    # ← the entire configuration
+```
+
+`hat sync` writes `$DIR/.envrc`, and [direnv](https://direnv.net) exports those
+variables when you `cd` into the tree and **unexports them on the way out**.
+That unloading is the whole reason direnv is a dependency instead of a
+hand-rolled shell hook: a variable that leaked out of `~/Projects/Own` would
+silently make `eas build` in a work project run as the personal account.
+
+### Which token belongs to which CLI
+
+Nothing has to decide — the **variable name is the binding**. `eas` reads
+`EXPO_TOKEN`, the Supabase CLI reads `SUPABASE_ACCESS_TOKEN`; each hardcodes the
+name it answers to, so `hat` only delivers the value and never routes it.
+
+The one thing it must catch is a **typo**, because that fails silently: write
+`EXPO_ACCESS_TOKEN` and nothing errors — no CLI reads it, and `eas` quietly
+falls back to the global `~/.expo` session, i.e. the wrong account. So `sync`
+validates every `TOKENS=` entry against a known table, and `doctor` checks the
+identity that actually resolves:
+
+| Variable | CLI | Verified with |
+|---|---|---|
+| `EXPO_TOKEN` | `eas`, `expo` | `eas whoami` |
+| `SUPABASE_ACCESS_TOKEN` | `supabase` | `supabase projects list` |
+| `GH_TOKEN` | `gh` | `gh auth status` |
+
+`hat token list` prints it; supporting another CLI is one row.
+
+### Secrets
+
+Tokens are **never** committed — the same rule as the SSH keys. One file per
+variable at `~/.config/hat/<persona>/<VAR>`, mode `600`; the generated `.envrc`
+holds only the path, wrapped in a guard so a missing file warns once instead of
+erroring on every `cd`:
+
+```bash
+# generated by hat sync — do not edit
+_hat_token() {
+  if [ -r "$2" ]; then export "$1=$(cat "$2")"
+  else echo "hat: $1 not set — run: hat token set personal $1" >&2; fi
+}
+_hat_token EXPO_TOKEN "$HOME/.config/hat/personal/EXPO_TOKEN"
+unset -f _hat_token
+```
+
+Write them with `hat token set <persona> <VAR>` — it prompts without echoing,
+creates the directory and sets the mode. There is no `keygen` equivalent here:
+neither Expo nor Supabase can mint a token from the CLI, so create it in the
+browser (expo.dev → Access Tokens; supabase.com → Account → Access Tokens) and
+paste it in.
+
+### One identity per persona directory
+
+Everything under a persona's `DIR` shares **one** account per CLI. That is the
+design, not a limitation — the directory *is* the identity. If a single project
+ever needs different credentials, drop a nested `.envrc` inside that project:
+direnv layers children over parents, so it overrides only what it redefines and
+inherits the rest.
+
+### Gotchas
+
+- `$DIR/.envrc` is **generated**. `hat sync` overwrites it — never hand-edit it;
+  change `TOKENS=` and re-sync. It is also the only file `hat` writes outside
+  the dotfiles repo.
+- direnv refuses to load an `.envrc` until it is approved, so `hat sync` runs
+  `direnv allow` for the files it generates.
+- Never shell out inside the generated `.envrc` (e.g. `gh auth token`): direnv
+  re-executes it on every entry into the tree, so a subprocess there is a stall
+  on every `cd`. Reading a static file with `cat` is instant.
+- `GH_TOKEN` also decides which account `gh auth git-credential` serves, because
+  `config-files/gitconfig` delegates HTTPS credentials to `gh`. Harmless while
+  remotes are SSH, but it is a real interaction with an existing part of the
+  setup — add `GH_TOKEN` only after the others work.
 
 ## How it works
 

@@ -22,6 +22,7 @@ brew "tree-sitter"   # REQUIRED: provides the tree-sitter CLI that nvim-treesitt
                      # main branch compiles parsers with. The Linux package is named
                      # tree-sitter-cli; on Homebrew the CLI ships in this formula.
 brew "cmake"         # C++ builds; clangd reads the compile_commands.json it generates
+brew "direnv"        # per-directory env for git-hat's CLI account tokens (see packages.txt)
 
 # Deliberately absent, and why:
 #   zsh          — macOS ships 5.9; setup.sh chsh's to the system one

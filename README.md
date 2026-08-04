@@ -10,6 +10,7 @@ A personal repository of configuration files and helper scripts for automaticall
 
 - One-command environment setup via `install.sh`
 - Multiple Git identities picked **automatically by directory** via [`git-hat`](utilities/git-hat/README.md)
+- Separate **Expo/EAS and Supabase accounts per directory**, from the same personas — [CLI account tokens](utilities/git-hat/README.md#cli-account-tokens)
 - Zsh and SSH client configuration
 - Neovim configured as an IDE (LazyVim) for TypeScript/React, Python and C++
 - Claude Code setup synced across machines (settings, statusline, skills, hooks, rules)
@@ -150,6 +151,13 @@ from it. Everything outside a persona directory defaults to personal.
 - `~/Projects/JuliusAgency/**` → office
 - `~/Projects/Own-old/**` → work (deprecated account)
 
+The same mapping carries per-account **CLI tokens**: Expo/EAS and Supabase each
+store a single global login, so a persona's `TOKENS=` field plus direnv scopes
+them to its `DIR` — `cd ~/Projects/Own` and `eas`/`supabase` are the personal
+accounts; `cd` out and they are the work ones, with no re-login. Set them with
+`hat token set`; see
+[CLI account tokens](utilities/git-hat/README.md#cli-account-tokens).
+
 Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 
 ---
@@ -181,5 +189,8 @@ Details: [utilities/git-hat/README.md](utilities/git-hat/README.md).
 - ~~Ask about username instead of hardcoding `/home/dmitriy`~~ — done: all paths are `~`-relative
 - Auto-install of Zsh plugins and fonts
 - ~~Homebrew integration on macOS~~ — done: `platform/macos/Brewfile`
+- `GH_TOKEN` as a per-directory CLI account token — deferred: it also redirects
+  `gh auth git-credential`, which `config-files/gitconfig` depends on
+  ([context](utilities/git-hat/README.md#cli-account-tokens))
 - Automatic backup of existing config files before linking
 - Dotfiles version detection and self-update logic

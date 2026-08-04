@@ -39,3 +39,9 @@ export PATH=$PATH:$HOME/.maestro/bin
 export EDITOR=nvim
 export VISUAL=nvim
 alias v=nvim
+
+# direnv: loads a directory's .envrc on cd and unloads it on the way out. Used by
+# git-hat to scope CLI account tokens (EXPO_TOKEN, SUPABASE_ACCESS_TOKEN) to a
+# persona directory — see utilities/git-hat/README.md, "CLI account tokens".
+# Guarded: the hook must not break the shell on a machine without direnv yet.
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
