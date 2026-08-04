@@ -10,7 +10,12 @@
 # transaction, and yay is AUR-only on vanilla Arch. setup.sh bootstraps it.
 
 git
+# git-hat (utilities/git-hat) needs both of these:
 github-cli        # gitconfig delegates HTTPS credentials to `gh`
+direnv            # loads each persona's .envrc on cd and UNloads it on the way out.
+                  # The unload is the point: a CLI token leaking out of a persona
+                  # directory would silently run `eas build` in a work project
+                  # under the personal account.
 zsh
 stow
 curl
@@ -40,9 +45,3 @@ clang             # provides clangd, the C++ language server
 cmake             # C++ builds; clangd reads the compile_commands.json it generates
 
 keyd              # system-wide key remapping; configs in platform/linux/keyd/
-
-# Per-directory environment, used by git-hat's CLI account tokens: `hat sync` writes
-# an .envrc per persona and direnv exports it on cd — and UNexports it on the way out.
-# The unexport is the point: a token leaking out of a persona directory would silently
-# run `eas build` in a work project under the personal account.
-direnv

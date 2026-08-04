@@ -29,6 +29,19 @@ cd ~/dotfiles && ./install.sh
 `~/bin` must be on `$PATH`. Because the executable is named `git-hat`, it also
 works as a Git subcommand: `git hat whoami`.
 
+### Dependencies
+
+Both are declared in `platform/linux/packages.txt` and `platform/macos/Brewfile`,
+so `install.sh` brings them in. `hat doctor` reports either one missing.
+
+| Tool | Needed for | Without it |
+|---|---|---|
+| `gh` | HTTPS credentials (`config-files/gitconfig` delegates to `gh auth git-credential`), and `hat keygen`'s public-key upload | HTTPS pushes prompt for a password; `keygen` prints the manual `gh ssh-key add` command instead |
+| `direnv` | Loading each persona's generated `.envrc` — see [CLI account tokens](#cli-account-tokens). Needs `eval "$(direnv hook zsh)"` in the shell rc (already in `common/zshrc`) | `hat sync` still writes the `.envrc`, but nothing reads it: every CLI silently stays on its global login, i.e. the wrong account |
+
+`direnv` is required only by personas that declare `TOKENS=`; git and SSH identity
+selection works without it.
+
 ## Commands
 
 | Command | What it does |
