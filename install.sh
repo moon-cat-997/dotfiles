@@ -20,6 +20,24 @@ echo "- Detected OS: $OS"
 # Ensure ~/bin exists
 mkdir -p ~/bin
 
+# Prune stale links. A script that moved or was deleted in the repo leaves a
+# dangling symlink behind: the ln -sf loops below only overwrite links they
+# recreate, never links whose source is gone. A dangling link is not executable,
+# so the command fails as a bare "command not found" that points at nothing.
+# Runs before the linking loops, so every still-valid link is recreated after.
+# Scoped to targets under ~/dotfiles — links to anything else are not ours.
+echo "- Pruning stale ~/bin links..."
+for link in "$HOME"/bin/*; do
+  [ -L "$link" ] || continue    # real files (hand-installed binaries) are not ours
+  [ -e "$link" ] && continue    # -e follows the link: target resolves, keep it
+  case "$(readlink "$link")" in
+    "$HOME"/dotfiles/*)
+      rm -f "$link"
+      echo "  ✔ Removed stale $(basename "$link")"
+      ;;
+  esac
+done
+
 # ~/.ssh may not exist on a fresh machine — create it before linking ssh_config,
 # otherwise `ln -sf ... ~/.ssh/config` fails and set -e aborts the install.
 mkdir -p ~/.ssh
