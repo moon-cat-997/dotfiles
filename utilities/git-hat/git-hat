@@ -734,15 +734,33 @@ cmd_token() {
       # никогда — он осел бы в history шелла.
       read -rsp "Paste $var for persona '$name': " val || val=""
       echo
+
+      # Обрезать окружающие пробелы и управляющие символы. Чаще всего это '\r'
+      # из буфера обмена с CRLF: и `cat` в .envrc, и doctor снимают только '\n',
+      # так что одинокий '\r' доезжает до заголовка Authorization и роняет CLI.
+      val="${val#"${val%%[![:space:][:cntrl:]]*}"}"
+      val="${val%"${val##*[![:space:][:cntrl:]]}"}"
+
       if [ -z "$val" ]; then
         echo "Empty value, aborted." >&2
+        return 1
+      fi
+
+      # Ввод скрыт (-s), поэтому лишнего в буфере обмена не видно НИ на вводе,
+      # ни в файле (0600) — ошибка всплывает только на живом запросе, где-то
+      # через неделю и в виде 'not a legal HTTP header value'. Так уже уезжал
+      # токен вместе с куском вывода doctor. Дешевле упасть здесь и назвать
+      # причину; длину печатаем вместо значения — сверить, не раскрывая.
+      if [[ "$val" == *[[:space:][:cntrl:]]* ]]; then
+        echo "✘ ${#val} chars containing whitespace or control characters — that is more than a token." >&2
+        echo "  Copy the token alone (site's copy button, not a terminal selection) and retry." >&2
         return 1
       fi
 
       # umask до создания: файл не должен существовать даже мгновение с 644
       ( umask 077; printf '%s\n' "$val" > "$file" )
       chmod 600 "$file"
-      echo "✔ wrote $file (mode $(stat_mode "$file"))"
+      echo "✔ wrote $file (mode $(stat_mode "$file"), ${#val} chars)"
       echo "  verify with 'hat doctor'"
       ;;
 
