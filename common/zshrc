@@ -45,3 +45,6 @@ alias v=nvim
 # persona directory — see utilities/git-hat/README.md, "CLI account tokens".
 # Guarded: the hook must not break the shell on a machine without direnv yet.
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
+
+# Run Claude Code without the laptop sleeping (idle, lid close) while it runs
+alias claude-awake='systemd-inhibit --what=sleep:idle:handle-lid-switch --why="Claude working" claude'
